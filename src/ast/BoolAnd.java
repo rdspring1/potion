@@ -1,9 +1,9 @@
 package ast;
-public class BoolAnd extends BoolExp
+public class BoolAnd extends Exp
 {
-	public BoolExp lhs;
-	public BoolExp rhs;
-	public BoolAnd(BoolExp lhs, BoolExp Rhs)
+	public Exp lhs;
+	public Exp rhs;
+	public BoolAnd(Exp lhs, Exp Rhs)
 	{
 		this.lhs = lhs;
 		this.rhs = rhs;

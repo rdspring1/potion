@@ -1,5 +1,5 @@
 package ast;
-public class LessThan extends BoolExp
+public class LessThan extends Exp
 {
 	public Exp lhs;
 	public Exp rhs;

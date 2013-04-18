@@ -1,5 +1,5 @@
 package ast;
-public class BoolEq extends BoolExp
+public class BoolEq extends Exp
 {
 	public Exp lhs;
 	public Exp rhs;

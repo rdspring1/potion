@@ -1,8 +1,8 @@
 package ast;
-public class Not extends BoolExp
+public class Not extends Exp
 {
-	public BoolExp exp;
-	public Not(BoolExp exp)
+	public Exp exp;
+	public Not(Exp exp)
 	{
 		this.exp = exp;
 	}

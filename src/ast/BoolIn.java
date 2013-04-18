@@ -1,5 +1,5 @@
 package ast;
-public class BoolIn extends BoolExp
+public class BoolIn extends Exp
 {
 	public Identifier id;
 	public Exp exp;
