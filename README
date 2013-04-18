@@ -1,0 +1,9 @@
+Potion is a simple version of Elixir for topology driven local computation algorithms.
+
+Compiles to CUDA(TODO)
+
+
+
+Requires:
+Javacc
+Ant
