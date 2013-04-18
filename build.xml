@@ -1,0 +1,14 @@
+<project name="Potion Compiler" default="compile" basedir=".">
+    <!-- Do all the Javacc calling magic -->
+    <target name="javacc">
+        <exec executable="javacc">
+            <arg value="lex.jj" />
+        </exec>
+    </target>
+    <target name="compile" depends="javacc">
+        <javac srcdir="." destdir="."/>
+    </target>
+    <target name="run" >
+        <java classname="Compiler" classpath="." />
+    </target>
+</project>

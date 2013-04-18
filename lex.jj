@@ -1,13 +1,20 @@
 
 PARSER_BEGIN(Compiler)
-import ast;
+import ast.*;
 import java.util.List;
+import java.util.ArrayList;
 public class Compiler
 {
 	public static void main(String[] args)
 	{
-		ast.Program p;
-		p =  new Compiler(System.in).Program();
+		Program p;
+		try {
+			p =  new Compiler(System.in).Program();
+
+        } catch (Throwable e) {
+            e.printStackTrace();
+            return;
+        }
 	}
 }
 PARSER_END(Compiler)
@@ -55,41 +62,41 @@ TOKEN : {
 
 SKIP : { <" "> | <"\t"> | <"\n"> |<"\r">| <"//" (~["\n","\r"])* ("\n"|"\r")> }
 
-ast.Program Program():
-{Graph g; List<ast.Global> globals; List<ast.OpDef> opdefs ; List<ast.ActionDef> actiondefs;}
+Program Program():
+{Graph g; List<Global> globals; List<OpDef> opdefs ; List<ActionDef> actiondefs;}
 {
 	g = Graph()
 	{return null;}
 }
-ast.Graph Graph():
-{List<ast.AttDef> vatts; List<ast.AttDef> eatts;} 
+Graph Graph():
+{List<Attribute> vatts; List<Attribute> eatts;} 
 {
 	<GRAPH> <LSQUARE> <NODES><LPAREN> vatts = AttList() <RPAREN> <COMMA> <EDGES> <LPAREN> eatts = AttList() <RPAREN> <RSQUARE>
-	{return new ast.Graph();}
+	{return new Graph();}
 }
-ast.AttList AttList():
-{List <ast.AttDef> attributes; ast.AttDef attribute;}
+List<Attribute> AttList():
+{List <Attribute> attributes; Attribute attribute;}
 {
-	{attributes = new List<ast.AttDef>();}
-	(attribute = Attribute() {atributes.add(attribute);})*
+	{attributes = new ArrayList<Attribute>();}
+	(attribute = Attribute() {attributes.add(attribute);})*
 	{return attributes;}
 }
-ast.Attribute Attribute():
-{ast.Attribute attribute; ast.Identifier id; ast.Type type;}
+Attribute Attribute():
+{Attribute attribute; Identifier id; Type type;}
 {
 	id = Id() <COLON> type = Type()
-	{return new ast.Attribute(id,type);}
+	{return new Attribute(id,type);}
 }
-ast.Type Type():
+Type Type():
 {}
 {
-	(<TFLOAT> {return new ast.BaseType(ast.Type.Float);}) |
-	(<TINT> {return new ast.BaseType(ast.Type.Int);})
-	(<SET> <LSQUARE> <TFLOAT> <RSQUARE>{return new ast.SetType(ast.Type.Float);}) |
-	(<SET> <LSQUARE><TINT> <RSQUARE>{return new ast.SetType(ast.Type.Int);})
+	(<TFLOAT> {return new BaseType(Type.Types.FLOAT);}) |
+	(<TINT> {return new BaseType(Type.Types.INT);})
+	(<SET> <LSQUARE> <TFLOAT> <RSQUARE>{return new SetType(Type.Types.FLOAT);}) |
+	(<SET> <LSQUARE><TINT> <RSQUARE>{return new SetType(Type.Types.INT);})
 }
-ast.Indentifier Id():
+Identifier Id():
 {Token tok;}
 {
-	tok = <ID> { return new ast.Identifier(tok.image);}
+	tok = <ID> { return new Identifier(tok.image);}
 }
