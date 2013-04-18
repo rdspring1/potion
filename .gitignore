@@ -1,8 +1,8 @@
-Compiler.java
-CompilerConstants.java
-CompilerTokenManager.java
-ParseException.java
-SimpleCharStream.java
-TokenMgrError.java
-Token.java
-*.class
+src/Compiler.java
+src/CompilerConstants.java
+src/CompilerTokenManager.java
+src/ParseException.java
+src/SimpleCharStream.java
+src/TokenMgrError.java
+src/Token.java
+bin

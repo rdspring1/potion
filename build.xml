@@ -1,14 +1,17 @@
 <project name="Potion Compiler" default="compile" basedir=".">
     <!-- Do all the Javacc calling magic -->
-    <target name="javacc">
-        <exec executable="javacc">
-            <arg value="lex.jj" />
-        </exec>
+	<target name="javacc">
+        <!--For some silly reason, the javacc task requires a hard coded path to javacc.jar. Whose location is system specific...
+            Since that is stupid, I am just doing it this way, it only needs javacc to be in $PATH, which it should be.
+        !-->
+		<exec executable="javacc" dir="src/" >
+			<arg value="lex.jj"/>
+		</exec>
     </target>
     <target name="compile" depends="javacc">
-        <javac srcdir="." destdir="."/>
+		<javac srcdir="./src" destdir="./bin"/>
     </target>
     <target name="run" >
-        <java classname="Compiler" classpath="." />
+		<java classname="Compiler" classpath="./bin" />
     </target>
 </project>
