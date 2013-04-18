@@ -1,0 +1,94 @@
+
+PARSER_BEGIN(Compiler)
+import ast;
+import java.util.List;
+public class Compiler
+{
+	public static void main(String[] args)
+	{
+		ast.Program p;
+	}
+}
+PARSER_END(Compiler)
+TOKEN : {
+	<GRAPH: "graph"> |
+	<NODES: "nodes"> |
+	<EDGES: "edges"> |
+	<FOREACH: "foreach"> |
+	<ITERATE: "iterate"> |
+	<FOR: "for"> |
+	<UNROLL: "unroll" > |
+	<SET: "set"> |
+	<MAIN: "main" > |
+	<IN: "in"> |
+	<IF: "if"> |
+	<ELSE: "else" > |
+	<TINT: "int" > |
+	<TFLOAT: "float"> |
+	<LPAREN: "("> |
+	<RPAREN: ")"> |
+	<LBRACE: "{"> |
+	<RBRACE: "}"> |
+	<LSQUARE: "["> |
+	<RSQUARE: "]"> |
+	<SEMICOLON: ";"> |
+	<COLON: ":"> |
+	<COMMA: ","> |
+	<PLUS: "+"> |
+	<MINUS: "-"> |
+	<DIV: "/"> |
+	<MOD: "%"> |
+	<TIMES: "*"> |
+	<EQUALS: "="> |
+	<LT: "<"> |
+	<GT: ">"> |
+	<XOR: "^"> |
+	<OR: "|"> |
+	<QUES: "?"> |
+    <ID: <LETTER>("_"|<LETTER>|<DIGIT>)*>|
+    <NUM: (<DIGIT>)+> |
+	<STR: "\"" (~["\""])* "\""> |
+    <#LETTER: ["a"-"z","A"-"Z"]>|
+    <#DIGIT: ["0"-"9"]>
+}
+
+SKIP : { <" "> | <"\t"> | <"\n"> |<"\r">| <"//" (~["\n","\r"])* ("\n"|"\r")> }
+
+ast.Program Program():
+{Graph g; List<ast.Global> globals; List<ast.OpDef> opdefs ; List<ast.ActionDef> actiondefs;}
+{
+	g = Graph()
+	{return null;}
+}
+ast.Graph Graph():
+{List<ast.AttDef> vatts; List<ast.AttDef> eatts;} 
+{
+	<GRAPH> <LSQUARE> <NODES><LPAREN> vatts = AttList() <RPAREN> <COMMA> <EDGES> <LPAREN> eatts = AttList() <RPAREN> <RSQUARE>
+	{return new ast.Graph();}
+}
+ast.AttList AttList():
+{List <ast.AttDef> attributes; ast.AttDef attribute;}
+{
+	{attributes = new List<ast.AttDef>();}
+	(attribute = Attribute() {atributes.add(attribute);})*
+	{return attributes;}
+}
+ast.Attribute Attribute():
+{ast.Attribute attribute; ast.Identifier id; ast.Type type;}
+{
+	id = Id() <COLON> type = Type()
+	{return new ast.Attribute(id,type);}
+}
+ast.Type Type():
+{}
+{
+	(<TFLOAT> {return new ast.BaseType(ast.Type.Float);}) |
+	(<TINT> {return new ast.BaseType(ast.Type.Int);})
+	(<SET> <LSQUARE> <TFLOAT> <RSQUARE>{return new ast.SetType(ast.Type.Float);}) |
+	(<SET> <LSQUARE><TINT> <RSQUARE>{return new ast.SetType(ast.Type.Int);})
+}
+ast.Indentifier Id():
+{Token tok;}
+{
+	tok = <ID> { return new ast.Identifier(tok.image);}
+}
