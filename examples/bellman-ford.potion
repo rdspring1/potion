@@ -1,0 +1,12 @@
+graph [ nodes(node : Node , dist : int) ,
+		edges(src : Node , dst : Node , weight : int)]
+		
+source Node
+initDist = [nodes(node a , dist ad)] -> 
+[ad = if (a == source) 0 else 999999]
+relaxedge = [nodes(node a, dist ad) nodes(node b, dist bd) edges(src a, dst b, weight w)
+			(((ad + w) < bd))] -> [bd = (ad + w)]
+
+init = foreach initDist
+sssp = iterate relaxedge
+main = init ; sssp
