@@ -7,9 +7,9 @@ public class Compiler
 {
 	public static void main(String[] args)
 	{
-		Exp p;
+		Program p;
 		try {
-			p =  new Compiler(System.in).Exp();
+			p =  new Compiler(System.in).Program();
 
         } catch (Throwable e) {
             e.printStackTrace();
@@ -43,6 +43,7 @@ TOKEN : {
 	<SEMICOLON: ";"> |
 	<COLON: ":"> |
 	<COMMA: ","> |
+	<DOT: ".">|
 	<PLUS: "+"> |
 	<MINUS: "-"> |
 	<DIV: "/"> |
@@ -66,25 +67,30 @@ TOKEN : {
 SKIP : { <" "> | <"\t"> | <"\n"> |<"\r">| <"//" (~["\n","\r"])* ("\n"|"\r")> }
 
 Program Program():
-{Graph g; List<Global> globals; List<OpDef> opdefs ; List<ActionDef> actiondefs;}
+{Graph g; List<Def> defs;}
 {
 	g = Graph()
-	globals = Globals()
-	opdefs = OpDefs()
-	{return null;}
+	defs = Defs()
+	{return new Program(g,defs);}
 }
 Graph Graph():
 {List<Attribute> vatts; List<Attribute> eatts;} 
 {
 	<GRAPH> <LSQUARE> <NODES><LPAREN> vatts = AttList() <RPAREN> <COMMA> <EDGES> <LPAREN> eatts = AttList() <RPAREN> <RSQUARE>
-	{return new Graph();}
+	{return new Graph(vatts,eatts);}
 }
-List<Global> Globals():
-{List <Global> globals; Global global;}
+List<Def> Defs():
+{List <Def> defs; Def def;Identifier id;}
 {
-	{globals = new ArrayList<Global>();}
-	(global = Global() {globals.add(global);})*
-	{return globals;}
+	{defs = new ArrayList<Def>();}
+	( 
+	//fuck you javacc, fuck you.
+	  id = Id()
+	   def = Def(id) {defs.add(def);}
+	 //|def = OpDef() {defs.add(def);}
+	 //|def = ActionDef() {defs.add(def);}
+	)*
+	{return defs;}
 }
 Global Global():
 {Identifier id; Type type;}
@@ -93,19 +99,59 @@ Global Global():
 	type = Type()
 	{return new Global(id,type);}
 }
-List<OpDef> OpDefs():
-{List<OpDef> defs; OpDef def;}
+//This exists because Lookahead doesn't play well up in Defs, fml
+Def Def(Identifier id):
+{Statement stm; OpExp exp; Type type;}
 {
-	{defs = new ArrayList<OpDef>();}
-	(def = OpDef() {defs.add(def);})*
-	{return defs;}
-	
+	LOOKAHEAD(3)
+	<EQUALS> stm = Statement() {return new ActionDef(id,stm);}
+	|<EQUALS> exp = OpExp() {return new OpDef(id,exp);}
+	|type = Type() {return new Global(id,type);}
+}
+
+ActionDef ActionDef():
+{Identifier id; Statement stm;}
+{
+	id = Id() <EQUALS> stm = Statement()
+	{return new ActionDef(id,stm);}
 }
 OpDef OpDef():
-{}
+{Identifier id; OpExp exp;}
 {
-	<LPAREN>
-	{return null;}
+	id = Id() <EQUALS> exp = OpExp()
+	{return new OpDef(id,exp);}
+}
+OpExp OpExp():
+{List<Tuple> tuples; Exp bexp;List<Assignment> assignments;}
+{
+	<LSQUARE> tuples = Tuples() <LPAREN> bexp = Exp() <RPAREN> <RSQUARE> <MINUS><GT><LSQUARE> assignments = Assignments() <RSQUARE>
+	{return new OpExp(tuples,bexp,assignments);}
+}
+List<Tuple> Tuples():
+{List<Tuple> tuples; Tuple tuple;}
+{
+	{tuples = new ArrayList<Tuple>();}
+	(tuple = Tuple() {tuples.add(tuple);})*
+	{return tuples;}
+}
+Tuple Tuple():
+{List<Attribute> attributes;}
+{
+ <NODES><LPAREN> attributes = AttList() <RPAREN> {return new Tuple(attributes,Tuple.Type.NODES);}|
+ <EDGES><LPAREN> attributes = AttList() <RPAREN> {return new Tuple(attributes,Tuple.Type.EDGES);}
+}
+List<Assignment> Assignments():
+{List<Assignment> assignments;Assignment assignment;}
+{
+	{assignments = new ArrayList<Assignment>();}
+	(assignment = Assignment() {assignments.add(assignment);})*
+	{return assignments;}
+}
+Assignment Assignment():
+{Identifier id; Exp exp;}
+{
+	id = Id() <EQUALS> exp = Exp()
+	{return new Assignment(id,exp);}
 }
 
 List<Attribute> AttList():
@@ -121,6 +167,24 @@ Attribute Attribute():
 	id = Id() <COLON> type = Type()
 	{return new Attribute(id,type);}
 }
+Statement Statement():
+{Statement res; Identifier id; Exp exp; Exp other; Statement stm; SchedExp sched;}
+{
+	 <ITERATE> sched = SchedExp() {res = new Iterate(sched);}
+	| <FOR> id = Id() exp = Exp() <DOT><DOT> other=Exp() stm = Statement() {res =new For(id,exp,other,stm);}
+	| <FOREACH> sched = SchedExp() {res =new ForEach(sched);}
+	| id = Id() {res = new AcidStatement(id);}
+	( <SEMICOLON> stm = Statement() {return new JoinStatement(res,stm);})?
+}
+SchedExp SchedExp():
+{Identifier opid; IntConst unroll;}
+{
+	{unroll = new IntConst("0");}
+	opid = Id()
+	(<UNROLL> unroll = Number())?
+	{return new SchedExp(opid,unroll.value);}
+}
+
 Type Type():
 {}
 {
@@ -168,7 +232,7 @@ Exp BinExp(Exp lhs):
 		<TIMES> rhs = Exp() {return new Times(lhs,rhs);}
 		<DIV> rhs = Exp() {return new Div(lhs,rhs);}
 }
-Exp Number():
+IntConst Number():
 {Token tok;}
 {
 	tok = <NUM> {return new IntConst(tok.image);}

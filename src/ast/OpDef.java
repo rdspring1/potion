@@ -1,5 +1,5 @@
 package ast;
-public class OpDef
+public class OpDef extends Def
 {
 	public Identifier id;
 	public OpExp exp;
