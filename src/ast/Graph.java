@@ -2,9 +2,9 @@ package ast;
 import java.util.List;
 public class Graph
 {
-	public List<Attribute> natts;
-	public List<Attribute> eatts;
-	public Graph(List<Attribute> natts, List<Attribute> eatts)
+	public List<AttributeDef> natts;
+	public List<AttributeDef> eatts;
+	public Graph(List<AttributeDef> natts, List<AttributeDef> eatts)
 	{
 		this.natts = natts;
 		this.eatts = eatts;

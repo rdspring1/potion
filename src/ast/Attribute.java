@@ -1,11 +1,11 @@
 package ast;
 public class Attribute
 {
-	public Identifier name;
-	public Type type;
-	public Attribute(Identifier name,Type type)
+	public Identifier id;
+	public Identifier var;
+	public Attribute(Identifier id,Identifier var)
 	{
-		this.name = name;
-		this.type = type;
+		this.id = id;
+		this.var= var;
 	}
 }

@@ -76,9 +76,9 @@ Program Program():
 	{return new Program(g,defs);}
 }
 Graph Graph():
-{List<Attribute> vatts; List<Attribute> eatts;} 
+{List<AttributeDef> vatts; List<AttributeDef> eatts;} 
 {
-	<GRAPH> <LSQUARE> <NODES><LPAREN> vatts = AttList() <RPAREN> <COMMA> <EDGES> <LPAREN> eatts = AttList() <RPAREN> <RSQUARE>
+	<GRAPH> <LSQUARE> <NODES><LPAREN> vatts = AttDefList() <RPAREN> <COMMA> <EDGES> <LPAREN> eatts = AttDefList() <RPAREN> <RSQUARE>
 	{return new Graph(vatts,eatts);}
 }
 List<Def> Defs():
@@ -156,6 +156,19 @@ Assignment Assignment():
 	{return new Assignment(id,exp);}
 }
 
+List<AttributeDef> AttDefList():
+{List <AttributeDef> attributes; AttributeDef attribute;}
+{
+	{attributes = new ArrayList<AttributeDef>();}
+	(attribute = AttributeDef() {attributes.add(attribute);})*
+	{return attributes;}
+}
+AttributeDef AttributeDef():
+{Identifier id; Type type;}
+{
+	id = Id() <COLON> type = Type()
+	{return new AttributeDef(id,type);}
+}
 List<Attribute> AttList():
 {List <Attribute> attributes; Attribute attribute;}
 {
@@ -164,10 +177,10 @@ List<Attribute> AttList():
 	{return attributes;}
 }
 Attribute Attribute():
-{Attribute attribute; Identifier id; Type type;}
+{Attribute attribute; Identifier id; Identifier var;}
 {
-	id = Id() <COLON> type = Type()
-	{return new Attribute(id,type);}
+	id = Id() <COLON> var = Id()
+	{return new Attribute(id,var);}
 }
 Statement Statement():
 {Statement res; Identifier id; Exp exp; Exp other; Statement stm; SchedExp sched;}

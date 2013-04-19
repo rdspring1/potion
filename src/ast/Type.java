@@ -3,6 +3,6 @@ public abstract class Type
 {
 	public Types of;
 	public enum Types {
-		FLOAT, INT, Node, Edge
+		FLOAT, INT, NODE, EDGE
 	}
 }
