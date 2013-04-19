@@ -1,5 +1,6 @@
 package ast;
 import java.util.List;
+import visitor.Visitor;
 public class ActionDef extends Def
 {
 	public Identifier id;
@@ -9,4 +10,9 @@ public class ActionDef extends Def
 		this.id = id;
 		this.stm = stm;
 	}
+	public void accept(Visitor vis)
+	{
+		vis.visit(this);
+	}
+
 }

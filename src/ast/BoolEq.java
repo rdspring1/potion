@@ -1,4 +1,5 @@
 package ast;
+import visitor.Visitor;
 public class BoolEq extends Exp
 {
 	public Exp lhs;
@@ -8,4 +9,9 @@ public class BoolEq extends Exp
 		this.lhs = lhs;
 		this.rhs = rhs;
 	}
+	public void accept(Visitor vis)
+	{
+		vis.visit(this);
+	}
+
 }

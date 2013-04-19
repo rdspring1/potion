@@ -1,4 +1,5 @@
 package ast;
+import visitor.Visitor;
 public class For extends Statement
 {
 	public Identifier var;
@@ -12,4 +13,9 @@ public class For extends Statement
 		this.end = end;
 		this.body = stm;
 	}
+	public void accept(Visitor vis)
+	{
+		vis.visit(this);
+	}
+
 }

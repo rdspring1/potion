@@ -1,4 +1,5 @@
 package ast;
+import visitor.Visitor;
 public class Not extends Exp
 {
 	public Exp exp;
@@ -6,4 +7,9 @@ public class Not extends Exp
 	{
 		this.exp = exp;
 	}
+	public void accept(Visitor vis)
+	{
+		vis.visit(this);
+	}
+
 }

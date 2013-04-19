@@ -1,4 +1,5 @@
 package ast;
+import visitor.Visitor;
 public class Identifier
 {
 	public String id;
@@ -6,4 +7,9 @@ public class Identifier
 	{
 		this.id = id;
 	}
+	public void accept(Visitor vis)
+	{
+		vis.visit(this);
+	}
+
 }

@@ -1,4 +1,5 @@
 package ast;
+import visitor.Visitor;
 public class OpDef extends Def
 {
 	public Identifier id;
@@ -8,4 +9,9 @@ public class OpDef extends Def
 		this.id = id;
 		this.exp = exp;
 	}
+	public void accept(Visitor vis)
+	{
+		vis.visit(this);
+	}
+
 }

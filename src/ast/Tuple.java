@@ -1,5 +1,6 @@
 package ast;
 import java.util.List;
+import visitor.Visitor;
 public class Tuple
 {
 	public List<Attribute> attribute;
@@ -12,4 +13,9 @@ public class Tuple
 		this.attribute = attribute;
 		this.type = type;
 	}
+	public void accept(Visitor vis)
+	{
+		vis.visit(this);
+	}
+
 }

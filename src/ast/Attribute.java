@@ -1,4 +1,5 @@
 package ast;
+import visitor.Visitor;
 public class Attribute
 {
 	public Identifier id;
@@ -8,4 +9,9 @@ public class Attribute
 		this.id = id;
 		this.var= var;
 	}
+	public void accept(Visitor vis)
+	{
+		vis.visit(this);
+	}
+
 }

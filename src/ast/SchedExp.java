@@ -1,4 +1,5 @@
 package ast;
+import visitor.Visitor;
 public class SchedExp
 {
 	public Identifier id;
@@ -8,4 +9,9 @@ public class SchedExp
 		this.id = id;
 		this.unroll = unroll;
 	}
+	public void accept(Visitor vis)
+	{
+		vis.visit(this);
+	}
+
 }
