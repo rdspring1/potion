@@ -7,9 +7,9 @@ public class Compiler
 {
 	public static void main(String[] args)
 	{
-		Program p;
+		Exp p;
 		try {
-			p =  new Compiler(System.in).Program();
+			p =  new Compiler(System.in).Exp();
 
         } catch (Throwable e) {
             e.printStackTrace();
@@ -27,6 +27,7 @@ TOKEN : {
 	<FOR: "for"> |
 	<UNROLL: "unroll" > |
 	<SET: "set"> |
+	<EMPTY: "empty"> |
 	<MAIN: "main" > |
 	<IN: "in"> |
 	<IF: "if"> |
@@ -35,8 +36,8 @@ TOKEN : {
 	<TFLOAT: "float"> |
 	<LPAREN: "("> |
 	<RPAREN: ")"> |
-	<LBRACE: "{"> |
-	<RBRACE: "}"> |
+	<LCURLY: "{"> |
+	<RCURLY: "}"> |
 	<LSQUARE: "["> |
 	<RSQUARE: "]"> |
 	<SEMICOLON: ";"> |
@@ -50,8 +51,10 @@ TOKEN : {
 	<EQUALS: "="> |
 	<LT: "<"> |
 	<GT: ">"> |
-	<XOR: "^"> |
-	<OR: "|"> |
+	<CARET: "^"> |
+	<PIPE: "|"> |
+	<AMP: "&"> |
+	<BANG: "!"> |
 	<QUES: "?"> |
     <ID: <LETTER>("_"|<LETTER>|<DIGIT>)*>|
     <NUM: (<DIGIT>)+> |
@@ -66,6 +69,8 @@ Program Program():
 {Graph g; List<Global> globals; List<OpDef> opdefs ; List<ActionDef> actiondefs;}
 {
 	g = Graph()
+	globals = Globals()
+	opdefs = OpDefs()
 	{return null;}
 }
 Graph Graph():
@@ -74,6 +79,35 @@ Graph Graph():
 	<GRAPH> <LSQUARE> <NODES><LPAREN> vatts = AttList() <RPAREN> <COMMA> <EDGES> <LPAREN> eatts = AttList() <RPAREN> <RSQUARE>
 	{return new Graph();}
 }
+List<Global> Globals():
+{List <Global> globals; Global global;}
+{
+	{globals = new ArrayList<Global>();}
+	(global = Global() {globals.add(global);})*
+	{return globals;}
+}
+Global Global():
+{Identifier id; Type type;}
+{
+	id = Id()
+	type = Type()
+	{return new Global(id,type);}
+}
+List<OpDef> OpDefs():
+{List<OpDef> defs; OpDef def;}
+{
+	{defs = new ArrayList<OpDef>();}
+	(def = OpDef() {defs.add(def);})*
+	{return defs;}
+	
+}
+OpDef OpDef():
+{}
+{
+	<LPAREN>
+	{return null;}
+}
+
 List<Attribute> AttList():
 {List <Attribute> attributes; Attribute attribute;}
 {
@@ -99,4 +133,49 @@ Identifier Id():
 {Token tok;}
 {
 	tok = <ID> { return new Identifier(tok.image);}
+}
+Exp Exp():
+{Exp lhs; Exp rhs; Identifier id;}
+{
+	(<EMPTY> {return new Empty();})
+	|(<LCURLY> id = Id()<RCURLY> {return new Set(id);})
+	|(lhs = If() {return lhs;})
+	|id = Id() {return new Var(id);}
+	|(lhs = Number() {return lhs;})
+	|(<LPAREN> lhs = ParenExp() <RPAREN> {return lhs;})
+}
+Exp ParenExp():
+{Exp lhs; Exp rhs; Identifier id;}
+{
+		LOOKAHEAD(3)
+		 id = Id() <IN> lhs = Exp() { return new BoolIn(id,lhs);} |
+		 <BANG> lhs = Exp(){return new Not(lhs);} |
+		 lhs = Exp() rhs = BinExp(lhs) {return rhs;}
+}
+Exp BinExp(Exp lhs):
+{Exp rhs; Identifier id;}
+{
+	   	LOOKAHEAD(2)
+		<AMP><AMP> rhs = Exp() {return new BoolAnd(lhs,rhs);} |
+		<AMP> rhs = Exp() {return new Intersection(lhs,rhs);}|
+	   	LOOKAHEAD(2)
+		<PIPE><PIPE> rhs = Exp() {return new BoolOr(lhs,rhs);}|
+		<PIPE> rhs = Exp() {return new Union(lhs,rhs);}|
+		<LT> rhs = Exp() {return new LessThan(lhs,rhs);}|
+		<EQUALS><EQUALS> rhs = Exp() {return new BoolEq(lhs,rhs);}|
+		<PLUS> rhs = Exp() {return new Plus(lhs,rhs);}|
+		<MINUS> rhs = Exp() {return new Minus(lhs,rhs);}
+		<TIMES> rhs = Exp() {return new Times(lhs,rhs);}
+		<DIV> rhs = Exp() {return new Div(lhs,rhs);}
+}
+Exp Number():
+{Token tok;}
+{
+	tok = <NUM> {return new IntConst(tok.image);}
+}
+Exp If():
+{Exp cond ; Exp tcase; Exp fcase;}
+{
+	<IF> <LPAREN> cond = Exp() <LCURLY> tcase = Exp() <RCURLY> <ELSE> <LCURLY> fcase = Exp() <RCURLY>
+	{return new If(cond,tcase,fcase);}
 }
