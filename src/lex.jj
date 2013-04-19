@@ -126,7 +126,8 @@ OpDef OpDef():
 OpExp OpExp():
 {List<Tuple> tuples; Exp bexp;List<Assignment> assignments;}
 {
-	<LSQUARE> tuples = Tuples() <LPAREN> bexp = Exp() <RPAREN> <RSQUARE> <MINUS><GT><LSQUARE> assignments = Assignments() <RSQUARE>
+	{bexp = new True();}
+	<LSQUARE> tuples = Tuples() [<LPAREN> bexp = Exp() <RPAREN>] <RSQUARE> <MINUS><GT><LSQUARE> assignments = Assignments() <RSQUARE>
 	{return new OpExp(tuples,bexp,assignments);}
 }
 List<Tuple> Tuples():
@@ -160,7 +161,7 @@ List<AttributeDef> AttDefList():
 {List <AttributeDef> attributes; AttributeDef attribute;}
 {
 	{attributes = new ArrayList<AttributeDef>();}
-	(attribute = AttributeDef() {attributes.add(attribute);})*
+	(attribute = AttributeDef() [<COMMA>]{attributes.add(attribute);})*
 	{return attributes;}
 }
 AttributeDef AttributeDef():
@@ -173,23 +174,35 @@ List<Attribute> AttList():
 {List <Attribute> attributes; Attribute attribute;}
 {
 	{attributes = new ArrayList<Attribute>();}
-	(attribute = Attribute() {attributes.add(attribute);})*
+	(attribute = Attribute() [<COMMA>]{attributes.add(attribute);})*
 	{return attributes;}
 }
 Attribute Attribute():
 {Attribute attribute; Identifier id; Identifier var;}
 {
-	id = Id() <COLON> var = Id()
+	id = Id() var = Id()
 	{return new Attribute(id,var);}
 }
 Statement Statement():
+{Statement res;}
+{
+	res = BaseStatement()
+	res = JoinStatement(res)
+	{return res;}
+}
+Statement BaseStatement():
 {Statement res; Identifier id; Exp exp; Exp other; Statement stm; SchedExp sched;}
 {
-	 <ITERATE> sched = SchedExp() {res = new Iterate(sched);}
-	| <FOR> id = Id() exp = Exp() <DOT><DOT> other=Exp() stm = Statement() {res =new For(id,exp,other,stm);}
-	| <FOREACH> sched = SchedExp() {res =new ForEach(sched);}
-	| id = Id() {res = new AcidStatement(id);}
-	( <SEMICOLON> stm = Statement() {return new JoinStatement(res,stm);})?
+	 <ITERATE> sched = SchedExp() {return new Iterate(sched);}
+	| <FOR> id = Id() exp = Exp() <DOT><DOT> other=Exp() stm = Statement() {return new For(id,exp,other,stm);}
+	| <FOREACH> sched = SchedExp() {return new ForEach(sched);}
+	| id = Id() {return new AcidStatement(id);}
+}
+Statement JoinStatement(Statement prev):
+{Statement next;}
+{
+	<SEMICOLON> next =  Statement() {return new JoinStatement(prev,next);} 
+	|{return prev;}
 }
 SchedExp SchedExp():
 {Identifier opid; IntConst unroll;}
@@ -204,9 +217,10 @@ Type Type():
 {}
 {
 	(<TFLOAT> {return new BaseType(Type.Types.FLOAT);}) |
-	(<TINT> {return new BaseType(Type.Types.INT);})
-	(<NODE> {return new BaseType(Type.Types.NODE);})
-	(<EDGE> {return new BaseType(Type.Types.EDGE);})
+	(<TINT> {return new BaseType(Type.Types.INT);}) |
+	(<NODE> {return new BaseType(Type.Types.NODE);}) |
+	(<EDGE> {return new BaseType(Type.Types.EDGE);}) |
+	LOOKAHEAD(3)
 	(<SET> <LSQUARE> <TFLOAT> <RSQUARE>{return new SetType(Type.Types.FLOAT);}) |
 	(<SET> <LSQUARE><TINT> <RSQUARE>{return new SetType(Type.Types.INT);})
 }
@@ -257,6 +271,6 @@ IntConst Number():
 Exp If():
 {Exp cond ; Exp tcase; Exp fcase;}
 {
-	<IF> <LPAREN> cond = Exp() <LCURLY> tcase = Exp() <RCURLY> <ELSE> <LCURLY> fcase = Exp() <RCURLY>
+	<IF> cond = Exp() tcase = Exp() <ELSE> fcase = Exp()
 	{return new If(cond,tcase,fcase);}
 }
