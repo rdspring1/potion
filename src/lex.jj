@@ -22,6 +22,8 @@ TOKEN : {
 	<GRAPH: "graph"> |
 	<NODES: "nodes"> |
 	<EDGES: "edges"> |
+	<NODE: "node"> |
+	<EDGE: "edge"> |
 	<FOREACH: "foreach"> |
 	<ITERATE: "iterate"> |
 	<FOR: "for"> |
@@ -190,6 +192,8 @@ Type Type():
 {
 	(<TFLOAT> {return new BaseType(Type.Types.FLOAT);}) |
 	(<TINT> {return new BaseType(Type.Types.INT);})
+	(<NODE> {return new BaseType(Type.Types.NODE);})
+	(<EDGE> {return new BaseType(Type.Types.EDGE);})
 	(<SET> <LSQUARE> <TFLOAT> <RSQUARE>{return new SetType(Type.Types.FLOAT);}) |
 	(<SET> <LSQUARE><TINT> <RSQUARE>{return new SetType(Type.Types.INT);})
 }
