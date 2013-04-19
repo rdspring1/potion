@@ -22,8 +22,8 @@ TOKEN : {
 	<GRAPH: "graph"> |
 	<NODES: "nodes"> |
 	<EDGES: "edges"> |
-	<NODE: "node"> |
-	<EDGE: "edge"> |
+	<NODE: "Node"> |
+	<EDGE: "Edge"> |
 	<FOREACH: "foreach"> |
 	<ITERATE: "iterate"> |
 	<FOR: "for"> |
