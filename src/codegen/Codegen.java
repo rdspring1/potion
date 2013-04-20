@@ -11,6 +11,9 @@ public class Codegen
 	}
 	public void generate(OpDef def)
 	{
+		//write our helper methods...
+		CheckShape(def);
+
 		System.out.printf("__global__ void %s (graph *_g, ...)\n{", def.id.id);
 		//print variables so we have them all
 		List<String> declared = new ArrayList<String>();
@@ -21,7 +24,7 @@ public class Codegen
 				System.out.printf("%s %s;\n", typedefs.get(at.id.id), at.var.id);
 			}
 		}
-		CheckShape(def);
+		emit("}");
 		
 	}
 	public void CheckShape(OpDef def)

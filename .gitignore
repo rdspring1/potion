@@ -6,3 +6,4 @@ src/SimpleCharStream.java
 src/TokenMgrError.java
 src/Token.java
 bin
+*.class
