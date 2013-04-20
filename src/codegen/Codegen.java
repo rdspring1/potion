@@ -14,7 +14,7 @@ public class Codegen
 		typedefs = new HashMap<String,String>();
 		//TODO: fill in typedefs from the graph
 	}
-	public void generate(OpDef def)
+	public void generate(OpDef def) throws Exception
 	{
 		//write our helper methods...
 		CheckShape(def);
@@ -97,7 +97,7 @@ public class Codegen
 
 
 	}
-	public void CheckShape(OpDef def)
+	public void CheckShape(OpDef def) throws Exception
 	{
 
 		/*
@@ -156,11 +156,11 @@ public class Codegen
 
 
 	//Util methods for finding the src,dst of edges
-	private String get_prop_name(Tuple t,String prop)
+	private String get_prop_name(Tuple t,String prop) throws Exception
 	{
 		for(Attribute at : t.attributes)
 			if(at.var.id.equals(prop))
 				return at.id.id;
-		return "";
+		throw new Exception("Expected a property:"+prop+" in tuple but none was found.");
 	}
 }
