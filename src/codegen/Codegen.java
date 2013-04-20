@@ -161,8 +161,8 @@ public class Codegen implements AstVisitor
 		emit("__device__ inline int _checkshape_"+def.id.id+"("+argbuilder+")\n{");
 		for (int i=0;i<node_items.size();i++) {
 			for (int j=0;j<i;j++) {
-				String ni = get_prop_type(node_items.get(i),"Node");
-				String nj = get_prop_type(node_items.get(j),"Node");
+				String ni = get_prop_type(node_items.get(i),Type.Types.NODE);
+				String nj = get_prop_type(node_items.get(j),Type.Types.NODE);
 				emit("if("+nj+"=="+ni+") return FALSE;");
 			}
 		}
@@ -183,10 +183,10 @@ public class Codegen implements AstVisitor
 
 
 	//Util methods for finding the src,dst of edges
-	private String get_prop_type(Tuple t,String prop)
+	private String get_prop_type(Tuple t,Type.Types prop)
 	{
 		for(Attribute at : t.attributes) {
-			if(typeToString(this.typedefs.get(at.id.id)).equals(prop))
+			if(this.typedefs.get(at.id.id).of == prop)
 				return at.var.id;
 		}
 		return "!!!!Error!!!!";
@@ -385,9 +385,9 @@ public class Codegen implements AstVisitor
 	{
 		switch(t){
 		case FLOAT:
-			return "float";
+			return "float*";
 		case INT:
-			return "int";
+			return "int*";
 		case NODE:
 			return "Node*";
 		case EDGE:
