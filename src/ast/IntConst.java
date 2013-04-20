@@ -1,5 +1,5 @@
 package ast;
-import visitor.Visitor;
+import visitor.AstVisitor;
 public class IntConst extends Exp
 {
 	public int value;
@@ -7,9 +7,9 @@ public class IntConst extends Exp
 	{
 		this.value = Integer.parseInt(str);
 	}
-	public void accept(Visitor vis)
+	public void visit(AstVisitor vis)
 	{
-		vis.visit(this);
+		vis.accept(this);
 	}
 
 }

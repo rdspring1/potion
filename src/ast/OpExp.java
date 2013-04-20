@@ -1,6 +1,6 @@
 package ast;
 import java.util.List;
-import visitor.Visitor;
+import visitor.AstVisitor;
 public class OpExp
 {
 	public List<Tuple> tuples;
@@ -12,9 +12,9 @@ public class OpExp
 		this.bexp = bexp;
 		this.assignments =assignments;
 	}
-	public void accept(Visitor vis)
+	public void visit(AstVisitor vis)
 	{
-		vis.visit(this);
+		vis.accept(this);
 	}
 
 }

@@ -1,5 +1,5 @@
 package ast;
-import visitor.Visitor;
+import visitor.AstVisitor;
 public class Minus extends Exp
 {
 	public Exp lhs;
@@ -8,9 +8,9 @@ public class Minus extends Exp
 	{
 		this.lhs = lhs; this.rhs = rhs;
 	}
-	public void accept(Visitor vis)
+	public void visit(AstVisitor vis)
 	{
-		vis.visit(this);
+		vis.accept(this);
 	}
 
 }

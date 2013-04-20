@@ -1,5 +1,5 @@
 package ast;
-import visitor.Visitor;
+import visitor.AstVisitor;
 public class OpDef extends Def
 {
 	public Identifier id;
@@ -9,9 +9,9 @@ public class OpDef extends Def
 		this.id = id;
 		this.exp = exp;
 	}
-	public void accept(Visitor vis)
+	public void visit(AstVisitor vis)
 	{
-		vis.visit(this);
+		vis.accept(this);
 	}
 
 }

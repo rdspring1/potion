@@ -1,5 +1,5 @@
 package ast;
-import visitor.Visitor;
+import visitor.AstVisitor;
 public class Attribute
 {
 	public Identifier id;
@@ -9,9 +9,9 @@ public class Attribute
 		this.id = id;
 		this.var= var;
 	}
-	public void accept(Visitor vis)
+	public void visit(AstVisitor vis)
 	{
-		vis.visit(this);
+		vis.accept(this);
 	}
 
 }

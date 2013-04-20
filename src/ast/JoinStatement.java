@@ -1,5 +1,5 @@
 package ast;
-import visitor.Visitor;
+import visitor.AstVisitor;
 public class JoinStatement extends Statement
 {
 	Statement s1;
@@ -9,9 +9,9 @@ public class JoinStatement extends Statement
 		this.s1 = s1;
 		this.s2 = s2;
 	}
-	public void accept(Visitor vis)
+	public void visit(AstVisitor vis)
 	{
-		vis.visit(this);
+		vis.accept(this);
 	}
 
 }

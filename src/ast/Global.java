@@ -1,5 +1,5 @@
 package ast;
-import visitor.Visitor;
+import visitor.AstVisitor;
 public class Global extends Def
 {
 	public Identifier name;
@@ -10,9 +10,9 @@ public class Global extends Def
 		this.type = type;
 	}
 
-	public void accept(Visitor vis)
+	public void visit(AstVisitor vis)
 	{
-		vis.visit(this);
+		vis.accept(this);
 	}
 
 }

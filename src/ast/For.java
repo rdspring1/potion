@@ -1,5 +1,5 @@
 package ast;
-import visitor.Visitor;
+import visitor.AstVisitor;
 public class For extends Statement
 {
 	public Identifier var;
@@ -13,9 +13,9 @@ public class For extends Statement
 		this.end = end;
 		this.body = stm;
 	}
-	public void accept(Visitor vis)
+	public void visit(AstVisitor vis)
 	{
-		vis.visit(this);
+		vis.accept(this);
 	}
 
 }

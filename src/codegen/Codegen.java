@@ -1,12 +1,13 @@
 package codegen;
 import ast.*;
 import java.util.*;
+import visitor.*;
 /* This is currently a total mess and should be farmed out a little bit, Should write IR nodes for every
  * ast node but much more organized, but this is for a later time and not oh god behind schedule crunch time
  *
  * TODO: make this not embarassing
  */
-public class Codegen
+public class Codegen implements AstVisitor
 {
 	private Map<String,String> typedefs;
 	public Codegen(Program p)
@@ -14,7 +15,7 @@ public class Codegen
 		typedefs = new HashMap<String,String>();
 		//TODO: fill in typedefs from the graph
 	}
-	public void generate(OpDef def) throws Exception
+	public void visit(OpDef def) throws Exception
 	{
 		//write our helper methods...
 		CheckShape(def);
@@ -162,5 +163,70 @@ public class Codegen
 			if(at.var.id.equals(prop))
 				return at.id.id;
 		throw new Exception("Expected a property:"+prop+" in tuple but none was found.");
+	}
+
+	public void accept(BoolAnd exp)
+	{
+		exp.lhs.visit(this);
+		emit(" && ");
+		exp.rhs.visit(this);
+	}
+	public void accept(BoolOr exp)
+	{
+		exp.lhs.visit(this);
+		emit(" || ");
+		exp.rhs.visit(this);
+	}
+	public void accept(BoolEq exp)
+	{
+		exp.lhs.visit(this);
+		emit(" == ");
+		exp.rhs.visit(this);
+	}
+	public void accept(BoolIn exp)
+	{
+		//TODO
+	}
+	public void accept(ast.Set exp)
+	{
+		//TODO
+	}
+	public void accept(Empty exp)
+	{
+		//TODO
+	}
+	public void accept(IntConst exp)
+	{
+		emit(""+exp.value);
+	}
+	public void accept(Var exp)
+	{
+		emit(exp.name.id);
+	}
+	public void accept(LessThan exp)
+	{
+		exp.lhs.visit(this);
+		emit(" < ");
+		exp.rhs.visit(this);
+	}
+	public void accept(True exp)
+	{
+		emit("TRUE");
+	}
+	public void accept(False exp)
+	{
+		emit("FALSE");
+	}
+	public void accept(Times exp)
+	{
+		exp.lhs.visit(this);
+		emit(" * ");
+		exp.rhs.visit(this);
+	}
+	public void accept(Plus exp)
+	{
+		exp.lhs.visit(this);
+		emit(" + ");
+		exp.rhs.visit(this);
 	}
 }

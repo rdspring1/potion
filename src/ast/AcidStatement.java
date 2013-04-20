@@ -1,5 +1,5 @@
 package ast;
-import visitor.Visitor;
+import visitor.AstVisitor;
 public class AcidStatement extends Statement
 {
 	public Identifier id;
@@ -7,8 +7,8 @@ public class AcidStatement extends Statement
 	{
 		this.id = id;
 	}
-	public void accept(Visitor vis)
+	public void visit(AstVisitor vis)
 	{
-		vis.visit(this);
+		vis.accept(this);
 	}
 }

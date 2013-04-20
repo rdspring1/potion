@@ -1,5 +1,5 @@
 package ast;
-import visitor.Visitor;
+import visitor.AstVisitor;
 public class BoolIn extends Exp
 {
 	public Identifier id;
@@ -9,9 +9,9 @@ public class BoolIn extends Exp
 		this.id = id;
 		this.exp = exp;
 	}
-	public void accept(Visitor vis)
+	public void visit(AstVisitor vis)
 	{
-		vis.visit(this);
+		vis.accept(this);
 	}
 
 }

@@ -1,5 +1,5 @@
 package ast;
-import visitor.Visitor;
+import visitor.AstVisitor;
 public class If extends Exp
 {
 	public Exp condition;
@@ -11,9 +11,9 @@ public class If extends Exp
 		this.tcase = tcase;
 		this.fcase = fcase;
 	}
-	public void accept(Visitor vis)
+	public void visit(AstVisitor vis)
 	{
-		vis.visit(this);
+		vis.accept(this);
 	}
 
 }

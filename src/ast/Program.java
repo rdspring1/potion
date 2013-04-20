@@ -1,6 +1,6 @@
 package ast;
 import java.util.List;
-import visitor.Visitor;
+import visitor.AstVisitor;
 public class Program
 {
 	public Graph graph;
@@ -11,9 +11,9 @@ public class Program
 		this.graph = graph;
 		this.defs =defs;
 	}
-	public void accept(Visitor vis)
+	public void visit(AstVisitor vis)
 	{
-		vis.visit(this);
+		vis.accept(this);
 	}
 
 }

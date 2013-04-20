@@ -1,5 +1,5 @@
 package ast;
-import visitor.Visitor;
+import visitor.AstVisitor;
 public class Set extends Exp
 {
 	public Identifier id;
@@ -7,9 +7,9 @@ public class Set extends Exp
 	{
 		this.id = id;
 	}
-	public void accept(Visitor vis)
+	public void visit(AstVisitor vis)
 	{
-		vis.visit(this);
+		vis.accept(this);
 	}
 
 }

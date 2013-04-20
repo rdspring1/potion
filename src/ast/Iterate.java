@@ -1,5 +1,5 @@
 package ast;
-import visitor.Visitor;
+import visitor.AstVisitor;
 public class Iterate extends Statement
 {
 	public SchedExp exp;
@@ -7,9 +7,9 @@ public class Iterate extends Statement
 	{
 		this.exp = exp;
 	}
-	public void accept(Visitor vis)
+	public void visit(AstVisitor vis)
 	{
-		vis.visit(this);
+		vis.accept(this);
 	}
 
 }

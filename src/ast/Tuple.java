@@ -1,6 +1,6 @@
 package ast;
 import java.util.List;
-import visitor.Visitor;
+import visitor.AstVisitor;
 public class Tuple
 {
 	public List<Attribute> attributes;
@@ -13,9 +13,9 @@ public class Tuple
 		this.attributes = attribute;
 		this.type = type;
 	}
-	public void accept(Visitor vis)
+	public void visit(AstVisitor vis)
 	{
-		vis.visit(this);
+		vis.accept(this);
 	}
 
 }

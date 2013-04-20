@@ -1,4 +1,4 @@
-package acceptor;
+package visitor;
 import ast.*;
 public interface AstVisitor
 {
