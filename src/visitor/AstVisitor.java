@@ -20,6 +20,7 @@ public interface AstVisitor
 	public void accept(For v);
 	public void accept(Iterate v);
 	public void accept(ForEach v);
+	public void accept(JoinStatement v);
 
 	//EXPS
 	public void accept(BoolAnd v);

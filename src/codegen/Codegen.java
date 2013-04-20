@@ -76,7 +76,7 @@ public class Codegen implements AstVisitor
 		emit("if(!_checkshape_"+def.id.id+"("+parambuilder+")) return;");
 		//TODO: decide how locking works
 		//generate assignment exp
-		emit("}");
+		emit("}\n");
 	}
 	public void CheckGuard(OpDef def)
 	{
@@ -105,7 +105,7 @@ public class Codegen implements AstVisitor
 		emit("return ");
 		//TODO: call Generate on def.exp.exp instead of stub FALSE
 		emit("FALSE");
-		emit(":\n}");
+		emit(":\n}\n");
 
 
 	}
@@ -157,11 +157,11 @@ public class Codegen implements AstVisitor
 			String dst = get_prop_name(edge_items.get(i),"dst");
 			emit("if(!Edge("+src+","+dst+")) return FALSE;");
 		}
-		emit("return TRUE;\n}");
+		emit("return TRUE;\n}\n");
 	}
 	private void emit(String s)
 	{
-		System.out.println(s);
+		System.out.print(s);
 	}
 
 
@@ -273,11 +273,13 @@ public class Codegen implements AstVisitor
 	}
 	public void accept(If exp)
 	{
+		emit("(");
 		exp.condition.visit(this);
 		emit("?");
 		exp.tcase.visit(this);
 		emit(":");
 		exp.fcase.visit(this);
+		emit(")");
 	}
 	public void accept(Tuple t)
 	{
@@ -332,6 +334,10 @@ public class Codegen implements AstVisitor
 		//TODO
 	}
 	public void accept(SchedExp exp)
+	{
+		//TODO
+	}
+	public void accept(JoinStatement stm)
 	{
 		//TODO
 	}

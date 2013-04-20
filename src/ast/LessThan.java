@@ -4,7 +4,7 @@ public class LessThan extends Exp
 {
 	public Exp lhs;
 	public Exp rhs;
-	public LessThan(Exp lhs, Exp Rhs)
+	public LessThan(Exp lhs, Exp rhs)
 	{
 		this.lhs = lhs;
 		this.rhs = rhs;

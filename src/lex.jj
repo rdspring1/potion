@@ -3,13 +3,15 @@ PARSER_BEGIN(Compiler)
 import ast.*;
 import java.util.List;
 import java.util.ArrayList;
+import codegen.Codegen;
 public class Compiler
 {
 	public static void main(String[] args)
 	{
-		Program p;
+		Exp p;
 		try {
-			p =  new Compiler(System.in).Program();
+			p =  new Compiler(System.in).Exp();
+			p.visit(new Codegen(null));
 
         } catch (Throwable e) {
             e.printStackTrace();

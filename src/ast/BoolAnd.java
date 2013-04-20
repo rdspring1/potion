@@ -4,7 +4,7 @@ public class BoolAnd extends Exp
 {
 	public Exp lhs;
 	public Exp rhs;
-	public BoolAnd(Exp lhs, Exp Rhs)
+	public BoolAnd(Exp lhs, Exp rhs)
 	{
 		this.lhs = lhs;
 		this.rhs = rhs;
