@@ -10,22 +10,23 @@ import visitor.*;
 public class Codegen implements AstVisitor
 {
 	private Map<String,String> typedefs;
-	public Codegen(Program p)
+	public Codegen()
 	{
 		typedefs = new HashMap<String,String>();
 	}
 	public void accept(Program p)
 	{
-		//TODO
+		//TODO: Print our shared library code, classes loaders etc
+		p.graph.visit(this);
+		for(Def d: p.defs)
+			d.visit(this);
 	}
 	public void accept(Graph g)
 	{
-		/*TODO: pull stringtypes out of type without visiting because god that'd suck
 		for(AttributeDef attdef : g.natts)
-			typedefs.put(attdef.id.id,attdef.type);
+			typedefs.put(attdef.id.id,typeToString(attdef.type));
 		for(AttributeDef attdef : g.eatts)
-			typedefs.put(attdef.id.id,attdef.type);
-		*/
+			typedefs.put(attdef.id.id,typeToString(attdef.type));
 	}
 	public void accept(OpExp exp)
 	{
@@ -42,6 +43,7 @@ public class Codegen implements AstVisitor
 		//Kernel needs to handle getting the values for the apply. I'm not sure on how to do this right now
 		//Elixir paper explains it a bit but Im not sure I follow the non-slow version.. :(
 		//print variables so we have them all
+		emit("__global__ void _kernel_"+def.id.id+"(...) \n{");
 		List<String> declared = new ArrayList<String>();
 		for(Tuple t : def.exp.tuples) {
 			for(Attribute at : t.attributes) {
@@ -50,6 +52,7 @@ public class Codegen implements AstVisitor
 				System.out.printf("%s %s;\n", typedefs.get(at.id.id), at.var.id);
 			}
 		}
+		emit("}\n");
 		
 	}
 	public void Apply(OpDef def)
@@ -156,10 +159,9 @@ public class Codegen implements AstVisitor
 		}
 		emit("__device__ inline int _checkshape_"+def.id.id+"("+argbuilder+")\n{");
 		for (int i=0;i<node_items.size();i++) {
-			for (int j=0;j<node_items.size();j++) {
-				if(i == j) continue;
-				String ni = get_prop_name(node_items.get(i),"Node");
-				String nj = get_prop_name(node_items.get(j),"Node");
+			for (int j=0;j<i;j++) {
+				String ni = get_prop_type(node_items.get(i),"Node");
+				String nj = get_prop_type(node_items.get(j),"Node");
 				emit("if("+nj+"=="+ni+") return FALSE;");
 			}
 		}
@@ -180,11 +182,20 @@ public class Codegen implements AstVisitor
 
 
 	//Util methods for finding the src,dst of edges
+	private String get_prop_type(Tuple t,String prop)
+	{
+		for(Attribute at : t.attributes) {
+			if(this.typedefs.get(at.id.id).equals(prop))
+				return at.var.id;
+		}
+		return "!!!!Error!!!!";
+	}
 	private String get_prop_name(Tuple t,String prop)
 	{
-		for(Attribute at : t.attributes)
-			if(at.var.id.equals(prop))
-				return at.id.id;
+		for(Attribute at : t.attributes) {
+			if(at.id.id.equals(prop))
+				return at.var.id;
+		}
 		return "!!!!Error!!!!";
 	}
 
@@ -358,6 +369,33 @@ public class Codegen implements AstVisitor
 	{
 		stm.s1.visit(this);
 		stm.s2.visit(this);
+	}
+
+
+
+	//Helper method for Type, move to a Type IR at some point
+	public String typeToString(Type t)
+	{
+		if(t instanceof SetType)
+			return "set<"+typesToString(t.of)+">";
+		else return typesToString(t.of);
+	}
+	public String typesToString(Type.Types t)
+	{
+		switch(t){
+		case FLOAT:
+			return "float";
+		case INT:
+			return "int";
+		case NODE:
+			return "Node";
+		case EDGE:
+			return "Edge";
+		default:
+			return "";
+		}
+
+
 	}
 
 

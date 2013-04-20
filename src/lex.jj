@@ -11,7 +11,7 @@ public class Compiler
 		Program p;
 		try {
 			p =  new Compiler(System.in).Program();
-			p.visit(new Codegen(p));
+			p.visit(new Codegen());
 
         } catch (Throwable e) {
             e.printStackTrace();
