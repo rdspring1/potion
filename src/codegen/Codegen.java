@@ -1,20 +1,29 @@
 package codegen;
 import ast.*;
 import java.util.*;
+/* This is currently a total mess and should be farmed out a little bit, Should write IR nodes for every
+ * ast node but much more organized, but this is for a later time and not oh god behind schedule crunch time
+ *
+ * TODO: make this not embarassing
+ */
 public class Codegen
 {
 	private Map<String,String> typedefs;
 	public Codegen(Program p)
 	{
 		typedefs = new HashMap<String,String>();
-		//TODO: fill in typedefs
+		//TODO: fill in typedefs from the graph
 	}
 	public void generate(OpDef def)
 	{
 		//write our helper methods...
 		CheckShape(def);
+		CheckGuard(def);
+		Apply(def);
 
-		System.out.printf("__global__ void %s (graph *_g, ...)\n{", def.id.id);
+		//TODO: generate the kernel that calls the apply above
+		//Kernel needs to handle getting the values for the apply. I'm not sure on how to do this right now
+		//Elixir paper explains it a bit but Im not sure I follow the non-slow version.. :(
 		//print variables so we have them all
 		List<String> declared = new ArrayList<String>();
 		for(Tuple t : def.exp.tuples) {
@@ -24,8 +33,69 @@ public class Codegen
 				System.out.printf("%s %s;\n", typedefs.get(at.id.id), at.var.id);
 			}
 		}
-		emit("}");
 		
+	}
+	public void Apply(OpDef def)
+	{
+		List<Tuple> node_items = new ArrayList<Tuple>();
+		List<Tuple> edge_items = new ArrayList<Tuple>();
+		List<Attribute> attributes = new ArrayList<Attribute>();
+		for(Tuple t: def.exp.tuples){
+			for(Attribute at : t.attributes)
+				attributes.add(at);
+			switch(t.type) {
+			case NODES:
+				node_items.add(t);
+				break;
+			case EDGES:
+				edge_items.add(t);
+				break;
+			}
+		}
+		//Generate the apply
+		StringBuilder argbuilder = new StringBuilder(""); //for the args coming in
+		StringBuilder parambuilder = new StringBuilder(""); //for params to function calls(keep the order right)
+		for (int i=0; i<attributes.size();i++) {
+			Attribute at = attributes.get(i);
+			argbuilder.append(typedefs.get(at.id.id)+ " " + at.var.id + ((i < attributes.size()-1) ? "," : ""));
+			parambuilder.append(at.var.id + ((i < attributes.size()-1) ? "," : " "));
+		}
+		System.out.printf("__device__ inline void _apply_%s(%s)\n{", def.id.id, argbuilder);
+		emit("if(!_checkshape_"+def.id.id+"("+parambuilder+")) return;");
+		//TODO: decide how locking works
+		//generate assignment exp
+		emit("}");
+	}
+	public void CheckGuard(OpDef def)
+	{
+		/*TODO: This needs to go somewhere and be shared, probably in an OpDef IR node*/
+		List<Tuple> node_items = new ArrayList<Tuple>();
+		List<Tuple> edge_items = new ArrayList<Tuple>();
+		List<Attribute> attributes = new ArrayList<Attribute>();
+		for(Tuple t: def.exp.tuples){
+			for(Attribute at : t.attributes)
+				attributes.add(at);
+			switch(t.type) {
+			case NODES:
+				node_items.add(t);
+				break;
+			case EDGES:
+				edge_items.add(t);
+				break;
+			}
+		}
+		StringBuilder argbuilder = new StringBuilder("");
+		for (int i=0; i<attributes.size();i++) {
+			Attribute at = attributes.get(i);
+			argbuilder.append(typedefs.get(at.id.id)+ " " + at.var.id + ((i < attributes.size()-1) ? "," : ""));
+		}
+		emit("__device__ inline int _checkguard_"+def.id.id+"("+argbuilder+")\n{");
+		emit("return ");
+		//TODO: call Generate on def.exp.exp instead of stub FALSE
+		emit("FALSE");
+		emit(":\n}");
+
+
 	}
 	public void CheckShape(OpDef def)
 	{
