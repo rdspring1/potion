@@ -75,7 +75,15 @@ public class Codegen implements AstVisitor
 		System.out.printf("__device__ inline void _apply_%s(%s)\n{", def.id.id, argbuilder);
 		emit("if(!_checkshape_"+def.id.id+"("+parambuilder+")) return;");
 		//TODO: decide how locking works
-		//generate assignment exp
+		//TODO: Sort nodes for locking
+		//TODO: Lock
+
+		//guard check
+		emit("if(_checkguard_"+def.id.id+"("+parambuilder+")) {");
+		for(Assignment assignment : def.exp.assignments)
+			assignment.visit(this);
+		emit("}"); //close to if checkguard
+		//TODO:Emit unlocks
 		emit("}\n");
 	}
 	public void CheckGuard(OpDef def)
@@ -196,7 +204,9 @@ public class Codegen implements AstVisitor
 	}
 	public void accept(BoolIn exp)
 	{
-		//TODO
+		emit("("+exp.id.id+".count(");
+		exp.exp.visit(this);
+		emit(") > 0)");
 	}
 	public void accept(ast.Set exp)
 	{
@@ -327,11 +337,14 @@ public class Codegen implements AstVisitor
 	}
 	public void accept(Assignment assign)
 	{
-		//TODO
+		emit(assign.id.id +" = ");
+		assign.exp.visit(this);
+		emit(";");
 	}
 	public void accept(Global global)
 	{
-		//TODO
+		global.type.visit(this);
+		emit(" "+global.name.id+";");
 	}
 	public void accept(SchedExp exp)
 	{
@@ -339,7 +352,8 @@ public class Codegen implements AstVisitor
 	}
 	public void accept(JoinStatement stm)
 	{
-		//TODO
+		stm.s1.visit(this);
+		stm.s2.visit(this);
 	}
 
 
