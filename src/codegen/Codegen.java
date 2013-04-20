@@ -82,10 +82,10 @@ public class Codegen implements AstVisitor
 		//Generate the apply
 		StringBuilder argbuilder = new StringBuilder(""); //for the args coming in
 		StringBuilder parambuilder = new StringBuilder(""); //for params to function calls(keep the order right)
-		for (int i=0; i<attributes.size();i++) {
-			Attribute at = attributes.get(i);
-			argbuilder.append(this.typeToString(typedefs.get(at.id.id))+ " " + at.var.id + ((i < attributes.size()-1) ? "," : ""));
-			parambuilder.append(at.var.id + ((i < attributes.size()-1) ? "," : " "));
+		for (int i=0; i<node_names.size();i++) {
+			String s = node_names.get(i);
+			argbuilder.append("Node* " + s + ((i < node_names.size()-1) ? "," : ""));
+			parambuilder.append(s + ((i < node_names.size()-1) ? "," : " "));
 		}
 		emit("__device__ inline void _apply_"+def.id.id+"("+argbuilder+")\n{")  ;
 		emit("if(!_checkshape_"+def.id.id+"("+parambuilder+")) return;");
@@ -99,6 +99,7 @@ public class Codegen implements AstVisitor
 		for(int i=0;i<node_names.size();i++)
 			emit("nodes["+i+"].lock();");
 
+		emitGets(node_items,edge_items);
 		//guard check
 		emit("if(_checkguard_"+def.id.id+"("+parambuilder+")) {");
 		for(Assignment assignment : def.exp.assignments)
@@ -109,17 +110,47 @@ public class Codegen implements AstVisitor
 			emit("nodes["+i+"].unlock();");
 		emit("}\n");
 	}
+	public void emitGets(List<Tuple> node_items, List<Tuple> edge_items)
+	{
+		java.util.Set<String> declared = new HashSet<String>();
+		for(Tuple node : node_items) {
+			for(Attribute at : node.attributes) {
+				if(this.typedefs.get(at.id.id).of == Type.Types.NODE)
+					continue;
+				if(declared.contains(at.var.id))
+					continue;
+				declared.add(at.var.id);
+				emit(this.typeToString(typedefs.get(at.id.id))+" "+at.var.id);
+				emit(" = "+ get_prop_type(node,Type.Types.NODE)+"->"+at.id.id+";\n");
+			}
+		}
+		for(Tuple edge : edge_items) {
+			String src = get_prop_name(edge,"src");
+			String dst = get_prop_name(edge,"dst");
+			for(Attribute at : edge.attributes) {
+				if(this.typedefs.get(at.id.id).of == Type.Types.NODE)
+					continue;
+				if(declared.contains(at.var.id))
+					continue;
+				declared.add(at.var.id);
+				emit(this.typeToString(typedefs.get(at.id.id))+" "+at.var.id);
+				emit(" = "+ src+"->_out_edges["+dst+"->_id]->"+at.id.id+";\n");
+			}
+		}
+	}
 	public void CheckGuard(OpDef def)
 	{
 		/*TODO: This needs to go somewhere and be shared, probably in an OpDef IR node*/
 		List<Tuple> node_items = new ArrayList<Tuple>();
 		List<Tuple> edge_items = new ArrayList<Tuple>();
+		List<String> node_names = new ArrayList<String>();
 		List<Attribute> attributes = new ArrayList<Attribute>();
 		for(Tuple t: def.exp.tuples){
 			for(Attribute at : t.attributes)
 				attributes.add(at);
 			switch(t.type) {
 			case NODES:
+				node_names.add(get_prop_type(t,Type.Types.NODE));
 				node_items.add(t);
 				break;
 			case EDGES:
@@ -128,11 +159,13 @@ public class Codegen implements AstVisitor
 			}
 		}
 		StringBuilder argbuilder = new StringBuilder("");
-		for (int i=0; i<attributes.size();i++) {
-			Attribute at = attributes.get(i);
-			argbuilder.append(this.typeToString(typedefs.get(at.id.id))+ " " + at.var.id + ((i < attributes.size()-1) ? "," : ""));
+
+		for (int i=0; i<node_names.size();i++) {
+			String s = node_names.get(i);
+			argbuilder.append("Node* " + s + ((i < node_names.size()-1) ? "," : ""));
 		}
 		emit("__device__ inline int _checkguard_"+def.id.id+"("+argbuilder+")\n{");
+		emitGets(node_items,edge_items);
 		emit("return ");
 		def.exp.bexp.visit(this);
 		emit(";\n}\n");
@@ -152,6 +185,7 @@ public class Codegen implements AstVisitor
 		
 		//Categorize
 		List<Tuple> node_items = new ArrayList<Tuple>();
+		List<String> node_names = new ArrayList<String>();
 		List<Tuple> edge_items = new ArrayList<Tuple>();
 		List<Attribute> attributes = new ArrayList<Attribute>();
 		for(Tuple t: def.exp.tuples){
@@ -160,6 +194,7 @@ public class Codegen implements AstVisitor
 			switch(t.type) {
 			case NODES:
 				node_items.add(t);
+				node_names.add(get_prop_type(t,Type.Types.NODE));
 				break;
 			case EDGES:
 				edge_items.add(t);
@@ -168,9 +203,9 @@ public class Codegen implements AstVisitor
 		}
 		//python where are you my love :'(
 		StringBuilder argbuilder = new StringBuilder("");
-		for (int i=0; i<attributes.size();i++) {
-			Attribute at = attributes.get(i);
-			argbuilder.append(this.typeToString(typedefs.get(at.id.id))+ " " + at.var.id + ((i < attributes.size()-1) ? "," : ""));
+		for (int i=0; i<node_names.size();i++) {
+			String s = node_names.get(i);
+			argbuilder.append("Node* " + s + ((i < node_names.size()-1) ? "," : ""));
 		}
 		emit("__device__ inline int _checkshape_"+def.id.id+"("+argbuilder+")\n{");
 		for (int i=0;i<node_items.size();i++) {
@@ -181,7 +216,7 @@ public class Codegen implements AstVisitor
 			}
 		}
 		for (int i=0;i<edge_items.size();i++) {
-			//emit code checking Edge(src,dst)
+			//emit code checking Edge(src,dst). Assume all edges have a src and dst, if not W/E.
 			String src = get_prop_name(edge_items.get(i),"src");
 			String dst = get_prop_name(edge_items.get(i),"dst");
 			emit("if(!Edge("+src+","+dst+")) return FALSE;");
