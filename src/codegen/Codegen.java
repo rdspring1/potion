@@ -111,8 +111,7 @@ public class Codegen implements AstVisitor
 		}
 		emit("__device__ inline int _checkguard_"+def.id.id+"("+argbuilder+")\n{");
 		emit("return ");
-		//TODO: call Generate on def.exp.exp instead of stub FALSE
-		emit("FALSE");
+		def.exp.bexp.visit(this);
 		emit(":\n}\n");
 
 
