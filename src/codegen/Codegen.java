@@ -59,6 +59,7 @@ public class Codegen implements AstVisitor
 	public void Apply(OpDef def)
 	{
 		List<Tuple> node_items = new ArrayList<Tuple>();
+		List<String> node_names = new ArrayList<String>();
 		List<Tuple> edge_items = new ArrayList<Tuple>();
 		List<Attribute> attributes = new ArrayList<Attribute>();
 		for(Tuple t: def.exp.tuples){
@@ -67,6 +68,7 @@ public class Codegen implements AstVisitor
 			switch(t.type) {
 			case NODES:
 				node_items.add(t);
+				node_names.add(get_prop_type(t,Type.Types.NODE));
 				break;
 			case EDGES:
 				edge_items.add(t);
@@ -83,16 +85,23 @@ public class Codegen implements AstVisitor
 		}
 		System.out.printf("__device__ inline void _apply_%s(%s)\n{", def.id.id, argbuilder);
 		emit("if(!_checkshape_"+def.id.id+"("+parambuilder+")) return;");
-		//TODO: decide how locking works
 		//TODO: Sort nodes for locking
-		//TODO: Lock
+		StringBuilder nodebuilder = new StringBuilder();
+		for(String s : node_names)
+			nodebuilder.append(s+",");
+		emit("Node *_nodes[] = {"+nodebuilder+"};");
+		emit("_sort(nodes);");
+		//Lock
+		for(int i=0;i<node_names.size();i++)
+			emit("nodes["+i+"].lock();");
 
 		//guard check
 		emit("if(_checkguard_"+def.id.id+"("+parambuilder+")) {");
 		for(Assignment assignment : def.exp.assignments)
 			assignment.visit(this);
+		for(int i=0;i<node_names.size();i++)
+			emit("nodes["+i+"].unlock();");
 		emit("}"); //close to if checkguard
-		//TODO:Emit unlocks
 		emit("}\n");
 	}
 	public void CheckGuard(OpDef def)
@@ -314,11 +323,11 @@ public class Codegen implements AstVisitor
 	}
 	public void accept(SetType s)
 	{
-		//TODO
+		emit(this.typeToString(s));
 	}
 	public void accept(BaseType b)
 	{
-		//TODO
+		emit(this.typeToString(b));
 	}
 	public void accept(ForEach f)
 	{
