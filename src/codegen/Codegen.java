@@ -44,12 +44,13 @@ public class Codegen implements AstVisitor
 		//Elixir paper explains it a bit but Im not sure I follow the non-slow version.. :(
 		//print variables so we have them all
 		emit("__global__ void _kernel_"+def.id.id+"(...) \n{");
-		List<String> declared = new ArrayList<String>();
+		java.util.Set<String> declared = new HashSet<String>();
 		for(Tuple t : def.exp.tuples) {
 			for(Attribute at : t.attributes) {
-				if(declared.contains(at.id.id))
+				if(declared.contains(at.var.id))
 					continue;
 				System.out.printf("%s %s;\n", this.typeToString(typedefs.get(at.id.id)), at.var.id);
+				declared.add(at.var.id);
 			}
 		}
 		emit("}\n");
