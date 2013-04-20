@@ -4,14 +4,17 @@ import ast.*;
 import java.util.List;
 import java.util.ArrayList;
 import codegen.Codegen;
+import java.io.*;
 public class Compiler
 {
 	public static void main(String[] args)
 	{
 		Program p;
 		try {
-			p =  new Compiler(System.in).Program();
-			p.visit(new Codegen());
+			p =  new Compiler(new FileInputStream(args[0])).Program();
+			FileWriter writer = new FileWriter(args[1]);
+			p.visit(new Codegen(writer));
+			writer.close();
 
         } catch (Throwable e) {
             e.printStackTrace();

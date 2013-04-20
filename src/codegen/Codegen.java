@@ -1,6 +1,7 @@
 package codegen;
 import ast.*;
 import java.util.*;
+import java.io.*;
 import visitor.*;
 /* This is currently a total mess and should be farmed out a little bit, Should write IR nodes for every
  * ast node but much more organized, but this is for a later time and not oh god behind schedule crunch time
@@ -10,9 +11,11 @@ import visitor.*;
 public class Codegen implements AstVisitor
 {
 	private Map<String,Type> typedefs;
-	public Codegen()
+	private OutputStreamWriter writer;
+	public Codegen(OutputStreamWriter writer)
 	{
 		typedefs = new HashMap<String,Type>();
+		this.writer = writer;
 	}
 	public void accept(Program p)
 	{
@@ -49,7 +52,7 @@ public class Codegen implements AstVisitor
 			for(Attribute at : t.attributes) {
 				if(declared.contains(at.var.id))
 					continue;
-				System.out.printf("%s %s;\n", this.typeToString(typedefs.get(at.id.id)), at.var.id);
+				emit(this.typeToString(typedefs.get(at.id.id))+" "+at.var.id+";\n");
 				declared.add(at.var.id);
 			}
 		}
@@ -83,7 +86,7 @@ public class Codegen implements AstVisitor
 			argbuilder.append(this.typeToString(typedefs.get(at.id.id))+ " " + at.var.id + ((i < attributes.size()-1) ? "," : ""));
 			parambuilder.append(at.var.id + ((i < attributes.size()-1) ? "," : " "));
 		}
-		System.out.printf("__device__ inline void _apply_%s(%s)\n{", def.id.id, argbuilder);
+		emit("__device__ inline void _apply_"+def.id.id+"("+argbuilder+")\n{")  ;
 		emit("if(!_checkshape_"+def.id.id+"("+parambuilder+")) return;");
 		//TODO: Sort nodes for locking
 		StringBuilder nodebuilder = new StringBuilder();
@@ -186,7 +189,9 @@ public class Codegen implements AstVisitor
 	}
 	private void emit(String s)
 	{
-		System.out.print(s);
+		try{
+			writer.write(s);
+		}catch (Exception e) {/*screw you java*/}
 	}
 
 
