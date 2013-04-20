@@ -20,7 +20,12 @@ public class Codegen implements AstVisitor
 	}
 	public void accept(Graph g)
 	{
-		//TODO: fill in typedefs from the graph
+		/*TODO: pull stringtypes out of type without visiting because god that'd suck
+		for(AttributeDef attdef : g.natts)
+			typedefs.put(attdef.id.id,attdef.type);
+		for(AttributeDef attdef : g.eatts)
+			typedefs.put(attdef.id.id,attdef.type);
+		*/
 	}
 	public void accept(OpExp exp)
 	{

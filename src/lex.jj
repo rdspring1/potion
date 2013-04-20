@@ -8,10 +8,10 @@ public class Compiler
 {
 	public static void main(String[] args)
 	{
-		Exp p;
+		Program p;
 		try {
-			p =  new Compiler(System.in).Exp();
-			p.visit(new Codegen(null));
+			p =  new Compiler(System.in).Program();
+			p.visit(new Codegen(p));
 
         } catch (Throwable e) {
             e.printStackTrace();
