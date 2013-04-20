@@ -16,7 +16,6 @@ public interface AstVisitor
 	public void accept(Identifier v);
 	//public void accept(Def v);
 
-	public void accept(Statement v);
 	public void accept(AcidStatement v);
 	public void accept(For v);
 	public void accept(Iterate v);

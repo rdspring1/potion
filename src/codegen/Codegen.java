@@ -13,9 +13,20 @@ public class Codegen implements AstVisitor
 	public Codegen(Program p)
 	{
 		typedefs = new HashMap<String,String>();
+	}
+	public void accept(Program p)
+	{
+		//TODO
+	}
+	public void accept(Graph g)
+	{
 		//TODO: fill in typedefs from the graph
 	}
-	public void visit(OpDef def) throws Exception
+	public void accept(OpExp exp)
+	{
+		//should be handled from OpDef
+	}
+	public void accept(OpDef def)
 	{
 		//write our helper methods...
 		CheckShape(def);
@@ -98,7 +109,7 @@ public class Codegen implements AstVisitor
 
 
 	}
-	public void CheckShape(OpDef def) throws Exception
+	public void CheckShape(OpDef def)
 	{
 
 		/*
@@ -157,12 +168,12 @@ public class Codegen implements AstVisitor
 
 
 	//Util methods for finding the src,dst of edges
-	private String get_prop_name(Tuple t,String prop) throws Exception
+	private String get_prop_name(Tuple t,String prop)
 	{
 		for(Attribute at : t.attributes)
 			if(at.var.id.equals(prop))
 				return at.id.id;
-		throw new Exception("Expected a property:"+prop+" in tuple but none was found.");
+		return "!!!!Error!!!!";
 	}
 
 	public void accept(BoolAnd exp)
@@ -229,4 +240,101 @@ public class Codegen implements AstVisitor
 		emit(" + ");
 		exp.rhs.visit(this);
 	}
+	public void accept(Minus exp)
+	{
+		exp.lhs.visit(this);
+		emit(" - ");
+		exp.rhs.visit(this);
+	}
+	public void accept(Div exp)
+	{
+		exp.lhs.visit(this);
+		emit(" / ");
+		exp.rhs.visit(this);
+	}
+	public void accept(Not exp)
+	{
+		emit("!");
+		exp.exp.visit(this);
+	}
+	public void accept(Intersection exp)
+	{
+		//TODO:Make sure out Set class supports & for intersection
+		exp.lhs.visit(this);
+		emit(" & ");
+		exp.rhs.visit(this);
+	}
+	public void accept(Union exp)
+	{
+		//TODO:Make sure out Set class supports | for union
+		exp.lhs.visit(this);
+		emit(" | ");
+		exp.rhs.visit(this);
+	}
+	public void accept(If exp)
+	{
+		exp.condition.visit(this);
+		emit("?");
+		exp.tcase.visit(this);
+		emit(":");
+		exp.fcase.visit(this);
+	}
+	public void accept(Tuple t)
+	{
+		//shouldn't happen
+	}
+	public void accept(SetType s)
+	{
+		//TODO
+	}
+	public void accept(BaseType b)
+	{
+		//TODO
+	}
+	public void accept(ForEach f)
+	{
+		//TODO
+	}
+	public void accept(Iterate f)
+	{
+		//TODO
+	}
+	public void accept(For f)
+	{
+		//TODO
+	}
+	public void accept(AcidStatement a)
+	{
+		//TODO
+	}
+	public void accept(Identifier id)
+	{
+		//TODO (might not be needed anywhere)
+	}
+	public void accept(AttributeDef def)
+	{
+		//TODO
+	}
+	public void accept(ActionDef def)
+	{
+		//TODO
+	}
+	public void accept(Attribute att)
+	{
+		//TODO
+	}
+	public void accept(Assignment assign)
+	{
+		//TODO
+	}
+	public void accept(Global global)
+	{
+		//TODO
+	}
+	public void accept(SchedExp exp)
+	{
+		//TODO
+	}
+
+
 }
