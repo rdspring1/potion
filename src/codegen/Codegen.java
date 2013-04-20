@@ -99,9 +99,10 @@ public class Codegen implements AstVisitor
 		emit("if(_checkguard_"+def.id.id+"("+parambuilder+")) {");
 		for(Assignment assignment : def.exp.assignments)
 			assignment.visit(this);
+		emit("}"); //close to if checkguard
+		//unlock
 		for(int i=0;i<node_names.size();i++)
 			emit("nodes["+i+"].unlock();");
-		emit("}"); //close to if checkguard
 		emit("}\n");
 	}
 	public void CheckGuard(OpDef def)
