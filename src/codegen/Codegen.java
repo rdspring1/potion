@@ -9,10 +9,10 @@ import visitor.*;
  */
 public class Codegen implements AstVisitor
 {
-	private Map<String,String> typedefs;
+	private Map<String,Type> typedefs;
 	public Codegen()
 	{
-		typedefs = new HashMap<String,String>();
+		typedefs = new HashMap<String,Type>();
 	}
 	public void accept(Program p)
 	{
@@ -24,9 +24,9 @@ public class Codegen implements AstVisitor
 	public void accept(Graph g)
 	{
 		for(AttributeDef attdef : g.natts)
-			typedefs.put(attdef.id.id,typeToString(attdef.type));
+			typedefs.put(attdef.id.id,attdef.type);
 		for(AttributeDef attdef : g.eatts)
-			typedefs.put(attdef.id.id,typeToString(attdef.type));
+			typedefs.put(attdef.id.id,attdef.type);
 	}
 	public void accept(OpExp exp)
 	{
@@ -49,7 +49,7 @@ public class Codegen implements AstVisitor
 			for(Attribute at : t.attributes) {
 				if(declared.contains(at.id.id))
 					continue;
-				System.out.printf("%s %s;\n", typedefs.get(at.id.id), at.var.id);
+				System.out.printf("%s %s;\n", this.typeToString(typedefs.get(at.id.id)), at.var.id);
 			}
 		}
 		emit("}\n");
@@ -77,7 +77,7 @@ public class Codegen implements AstVisitor
 		StringBuilder parambuilder = new StringBuilder(""); //for params to function calls(keep the order right)
 		for (int i=0; i<attributes.size();i++) {
 			Attribute at = attributes.get(i);
-			argbuilder.append(typedefs.get(at.id.id)+ " " + at.var.id + ((i < attributes.size()-1) ? "," : ""));
+			argbuilder.append(this.typeToString(typedefs.get(at.id.id))+ " " + at.var.id + ((i < attributes.size()-1) ? "," : ""));
 			parambuilder.append(at.var.id + ((i < attributes.size()-1) ? "," : " "));
 		}
 		System.out.printf("__device__ inline void _apply_%s(%s)\n{", def.id.id, argbuilder);
@@ -115,7 +115,7 @@ public class Codegen implements AstVisitor
 		StringBuilder argbuilder = new StringBuilder("");
 		for (int i=0; i<attributes.size();i++) {
 			Attribute at = attributes.get(i);
-			argbuilder.append(typedefs.get(at.id.id)+ " " + at.var.id + ((i < attributes.size()-1) ? "," : ""));
+			argbuilder.append(this.typeToString(typedefs.get(at.id.id))+ " " + at.var.id + ((i < attributes.size()-1) ? "," : ""));
 		}
 		emit("__device__ inline int _checkguard_"+def.id.id+"("+argbuilder+")\n{");
 		emit("return ");
@@ -155,7 +155,7 @@ public class Codegen implements AstVisitor
 		StringBuilder argbuilder = new StringBuilder("");
 		for (int i=0; i<attributes.size();i++) {
 			Attribute at = attributes.get(i);
-			argbuilder.append(typedefs.get(at.id.id)+ " " + at.var.id + ((i < attributes.size()-1) ? "," : ""));
+			argbuilder.append(this.typeToString(typedefs.get(at.id.id))+ " " + at.var.id + ((i < attributes.size()-1) ? "," : ""));
 		}
 		emit("__device__ inline int _checkshape_"+def.id.id+"("+argbuilder+")\n{");
 		for (int i=0;i<node_items.size();i++) {
@@ -185,7 +185,7 @@ public class Codegen implements AstVisitor
 	private String get_prop_type(Tuple t,String prop)
 	{
 		for(Attribute at : t.attributes) {
-			if(this.typedefs.get(at.id.id).equals(prop))
+			if(typeToString(this.typedefs.get(at.id.id)).equals(prop))
 				return at.var.id;
 		}
 		return "!!!!Error!!!!";
@@ -388,9 +388,9 @@ public class Codegen implements AstVisitor
 		case INT:
 			return "int";
 		case NODE:
-			return "Node";
+			return "Node*";
 		case EDGE:
-			return "Edge";
+			return "Edge*";
 		default:
 			return "";
 		}
