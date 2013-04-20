@@ -1,4 +1,4 @@
-package codgen;
+package codegen;
 /*
  * Helpful class containing all our C++ code that we output
  */
@@ -15,7 +15,7 @@ public class CudaCode
 	{
 		return 
 			//bubble sort because :effort:
-			"__device__ void sort(Node **nodes, int length)"+
+			"__device__ inline void _sort(Node **nodes, int length)"+
 			"{ for(int i=0;i<length;i++) for(int j=0;j<length;j++)"+
 			"    if(nodes[j]->id < nodes[i]->id) {"+
 			"      Node* tmp = nodes[i]; nodes[i] = nodes[j]; nodes[j] = tmp; }" +

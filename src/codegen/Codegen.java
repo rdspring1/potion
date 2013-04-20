@@ -20,6 +20,7 @@ public class Codegen implements AstVisitor
 	public void accept(Program p)
 	{
 		//TODO: Print our shared library code, classes loaders etc
+		emit(CudaCode.helpers());
 		p.graph.visit(this);
 		for(Def d: p.defs)
 			d.visit(this);
@@ -93,7 +94,7 @@ public class Codegen implements AstVisitor
 		for(String s : node_names)
 			nodebuilder.append(s+",");
 		emit("Node *_nodes[] = {"+nodebuilder+"};");
-		emit("_sort(nodes);");
+		emit("_sort(nodes,"+node_names.size()+");");
 		//Lock
 		for(int i=0;i<node_names.size();i++)
 			emit("nodes["+i+"].lock();");
