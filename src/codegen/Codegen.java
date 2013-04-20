@@ -135,7 +135,7 @@ public class Codegen implements AstVisitor
 		emit("__device__ inline int _checkguard_"+def.id.id+"("+argbuilder+")\n{");
 		emit("return ");
 		def.exp.bexp.visit(this);
-		emit(":\n}\n");
+		emit(";\n}\n");
 
 
 	}
