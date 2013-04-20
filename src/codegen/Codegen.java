@@ -238,6 +238,7 @@ public class Codegen implements AstVisitor
 	}
 	public void accept(Var exp)
 	{
+		emit("*");
 		emit(exp.name.id);
 	}
 	public void accept(LessThan exp)
@@ -353,7 +354,7 @@ public class Codegen implements AstVisitor
 	}
 	public void accept(Assignment assign)
 	{
-		emit(assign.id.id +" = ");
+		emit("*"+assign.id.id +" = ");
 		assign.exp.visit(this);
 		emit(";");
 	}
@@ -385,9 +386,9 @@ public class Codegen implements AstVisitor
 	{
 		switch(t){
 		case FLOAT:
-			return "float*";
+			return "restrict float*";
 		case INT:
-			return "int*";
+			return "restrict int*";
 		case NODE:
 			return "Node*";
 		case EDGE:
