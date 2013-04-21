@@ -9,7 +9,7 @@ public class CudaCode
 	 */
 	public static String helpers()
 	{
-		return sort() + graphDecl() + edge();
+		return sort() + graphDecl() + edge()+union();
 	}
 	public static String sort()
 	{
@@ -20,6 +20,14 @@ public class CudaCode
 			"    if(nodes[j]->id < nodes[i]->id) {"+
 			"      Node* tmp = nodes[i]; nodes[i] = nodes[j]; nodes[j] = tmp; }" +
 			"}\n";
+	}
+	public static String union()
+	{
+		return
+			"__global__ void _union(bool *changeds, int size, bool *changed)"+
+			"{ bool res = false;"+
+			"for(int i=0;i<size;i++) res |= changeds[i];"+
+			"*changed = res;}";
 	}
 	public static String graphDecl()
 	{
