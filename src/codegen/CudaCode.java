@@ -9,7 +9,7 @@ public class CudaCode
 	 */
 	public static String helpers()
 	{
-		return sort() + graphDecl() + edge()+union();
+		return sort() + globals() + edge() + genMain();
 	}
 	public static String sort()
 	{
@@ -21,17 +21,10 @@ public class CudaCode
 			"      Node* tmp = nodes[i]; nodes[i] = nodes[j]; nodes[j] = tmp; }" +
 			"}\n";
 	}
-	public static String union()
+	public static String globals()
 	{
-		return
-			"__global__ void _union(bool *changeds, int size, bool *changed)"+
-			"{ bool res = false;"+
-			"for(int i=0;i<size;i++) res |= changeds[i];"+
-			"*changed = res;}";
-	}
-	public static String graphDecl()
-	{
-		return "__device__ Node * graph;\n";
+		return "__device__ Node * graph;\n"+
+			"__device__ bool *_gchanged;\n";
 	}
 	public static String edge()
 	{
@@ -65,5 +58,20 @@ public class CudaCode
 		String from_attrs ="";
 		String function_decls = "";
 		return base + from_attrs+"};"+function_decls+"\n";
+	}
+	public static String loadGraph()
+	{
+		return "void load_graph(char* fname) {i}\n";
+	}
+	public static String genMain()
+	{
+		String main =
+			"int main(int argc, char **argv)"+
+			"{"+
+			"load_graph(argv[1]);"+
+			"_action_main();"+
+			"return 0;" +
+			"}\n";
+		return main;
 	}
 }

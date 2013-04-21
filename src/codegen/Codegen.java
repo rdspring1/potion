@@ -49,7 +49,7 @@ public class Codegen implements AstVisitor
 		CheckGuard(def);
 		Apply(def);
 
-		emit("__global__ void _kernel_"+def.id.id+"(bool *chaged, int unroll) \n{");
+		emit("__global__ void _kernel_"+def.id.id+"(bool *gchanged, int unroll) \n{");
 		//Emit edge/node decls
 		int num_edges = 0;
 		for(Tuple t : def.exp.tuples) {
@@ -63,16 +63,16 @@ public class Codegen implements AstVisitor
 			}
 		}
 		//default changed to false
-		emit("*changed = false;");
+		emit("bool changed = false;");
 		//TODO: Current supporting three types of ops, Global, 1 vertex, 2 verts with shared edge
 
 		//empty args, just call apply
 		if(def.exp.tuples.size() == 0) {
-			emit("*changed = _apply_"+def.id.id+"();");
+			emit("changed = _apply_"+def.id.id+"();");
 		} else if(node_items.size() == 1) {
 			emit("int _id = threadIdx.x;");
 			emit(node_names.get(0)+ " = _get_node(_id);");
-			emit("*changed = _apply_"+def.id.id+"("+params+");");
+			emit("changed = _apply_"+def.id.id+"("+params+");");
 		} else if(node_items.size() == 2 && edge_items.size() == 1) {
 			emit("int _id = threadIdx.x;");
 			emit(node_names.get(0)+ " = _get_node(_id);");
@@ -84,13 +84,14 @@ public class Codegen implements AstVisitor
 			emit("for(int _i = 0; _i < "+node_names.get(0)+"->"+edge_map+"_size ; _i++) {");
 			emit("e0 = "+node_names.get(0)+"->" + edge_map+"[_i];");
 			emit(node_names.get(1)+" = e0->"+edge_side+";");
-			emit("*changed |= _apply_"+def.id.id+"("+params+");");
+			emit("changed |= _apply_"+def.id.id+"("+params+");");
 			emit("}");
 
 		} else {
 			System.err.println("Unsupported operation format");
 		}
-		emit("}\n");
+		emit("if (changed) *gchanged = true;");
+		emit("\n}\n");
 		
 	}
 	public void Apply(OpDef def)
@@ -337,35 +338,41 @@ public class Codegen implements AstVisitor
 	}
 	public void accept(ForEach f)
 	{
-		//TODO
+		f.exp.visit(this);
 	}
 	public void accept(Iterate f)
 	{
+		emit("cudaMemset(_gchanged,false,sizeof(bool));");
+		emit("changed = false;");
+		emit("while(!changed) {");
+		f.exp.visit(this);
+		emit("cudaMemcpy(&changed, _gchanged,sizeof(bool), cudaMemcpyDeviceToHost);");
+		emit("}");
 		//TODO
 	}
 	public void accept(For f)
 	{
-		//TODO
+		emit("for(int i=");
+		f.start.visit(this);
+		emit("; i <");
+		f.end.visit(this);
+		emit(";i++)");
+		f.body.visit(this);
 	}
 	public void accept(AcidStatement a)
 	{
-		//TODO
+		emit("_action_"+a.id.id+"();");
 	}
-	public void accept(Identifier id)
+	public void accept(SchedExp exp)
 	{
-		//TODO (might not be needed anywhere)
-	}
-	public void accept(AttributeDef def)
-	{
-		//TODO
+		emit("_kernel_"+exp.id.id+"<GRID,THREADS>(_gchanged,"+exp.unroll+");");
 	}
 	public void accept(ActionDef def)
 	{
-		//TODO
-	}
-	public void accept(Attribute att)
-	{
-		//TODO
+		emit(" void _action_"+def.id.id+"(){");
+		emit("bool changed;");
+		def.stm.visit(this);
+		emit("}");
 	}
 	public void accept(Assignment assign)
 	{
@@ -378,14 +385,20 @@ public class Codegen implements AstVisitor
 		global.type.visit(this);
 		emit(" "+global.name.id+";");
 	}
-	public void accept(SchedExp exp)
-	{
-		//TODO
-	}
 	public void accept(JoinStatement stm)
 	{
 		stm.s1.visit(this);
 		stm.s2.visit(this);
+	}
+	//The below accepts are never used
+	public void accept(Identifier id)
+	{
+	}
+	public void accept(AttributeDef def)
+	{
+	}
+	public void accept(Attribute att)
+	{
 	}
 
 

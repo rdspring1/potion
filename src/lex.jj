@@ -35,7 +35,7 @@ TOKEN : {
 	<UNROLL: "unroll" > |
 	<SET: "set"> |
 	<EMPTY: "empty"> |
-	<MAIN: "main" > |
+	//<MAIN: "main" > |
 	<IN: "in"> |
 	<IF: "if"> |
 	<ELSE: "else" > |
@@ -78,6 +78,7 @@ Program Program():
 {
 	g = Graph()
 	defs = Defs()
+	<EOF>
 	{return new Program(g,defs);}
 }
 Graph Graph():
