@@ -61,6 +61,9 @@ public class Codegen implements AstVisitor
 			String s = node_names.get(i);
 			parambuilder.append(s + ((i < node_names.size()-1) ? "," : " "));
 		}
+		for (int i=0; i<edge_items.size();i++) {
+			parambuilder.append(",e"+i );
+		}
 		//write our helper methods...
 		CheckShape(def);
 		CheckGuard(def);
@@ -70,16 +73,20 @@ public class Codegen implements AstVisitor
 		//Kernel needs to handle getting the values for the apply. I'm not sure on how to do this right now
 		//Elixir paper explains it a bit but Im not sure I follow the non-slow version.. :(
 		//print variables so we have them all
+		int num_edges = 0;
 		emit("__global__ void _kernel_"+def.id.id+"(int *chaged, ...) \n{");
 		java.util.Set<String> declared = new HashSet<String>();
 		for(Tuple t : def.exp.tuples) {
-			for(Attribute at : t.attributes) {
-				if(declared.contains(at.var.id))
-					continue;
-				emit(this.typeToString(typedefs.get(at.id.id))+" "+at.var.id+";\n");
-				declared.add(at.var.id);
+			switch(t.type) {
+				case EDGES:
+				emit("Edge *e"+num_edges+++";\n");
+				break;
+				case NODES:
+				emit("Node *"+get_prop_type(t,Type.Types.NODE)+";\n");
+				break;
 			}
 		}
+		emit("*changed = FALSE;");
 		//Handle our easy cases.
 		//empty args, just call apply
 		if(def.exp.tuples.size() == 0) {
@@ -95,9 +102,10 @@ public class Codegen implements AstVisitor
 			//if the first node is the src then out_edges, otherwise first node is dest and go for in_edges
 			String edge_map = (node_names.get(0).equals(get_prop_name(edge_items.get(0),"src"))) ? "out_edges" : "in_edges";
 			//iterate over edges like a boss
-			emit("for( std::map<int,Edge*>::iterator _it="+node_names.get(0)+"->"+edge_map+".begin(); _it != " +node_names.get(0)+"->"+edge_map+".end(); ++it) {");
-			emit(node_names.get(1)+ " = _it -> second->dst;");
-			emit("*changed = _apply_"+def.id.id+"("+parambuilder+");");
+			//emit("for( std::map<int,Edge*>::iterator _it="+node_names.get(0)+"->"+edge_map+".begin(); _it != " +node_names.get(0)+"->"+edge_map+".end(); ++it) {");
+			emit("for(int _i = 0; _i < "+node_names.get(0)+"->"+edge_map+"_size ; _i++) {");
+			emit(node_names.get(1)+ " = "+node_names.get(0)+"->" + edge_map+"[_i];");
+			emit("*changed |= _apply_"+def.id.id+"("+parambuilder+");");
 			emit("}");
 
 		} else {
@@ -132,6 +140,10 @@ public class Codegen implements AstVisitor
 			String s = node_names.get(i);
 			argbuilder.append("Node* " + s + ((i < node_names.size()-1) ? "," : ""));
 			parambuilder.append(s + ((i < node_names.size()-1) ? "," : " "));
+		}
+		for (int i=0; i<edge_items.size();i++) {
+			argbuilder.append(", Edge *e" + i);
+			parambuilder.append(",e"+i );
 		}
 		emit("__device__ inline int _apply_"+def.id.id+"("+argbuilder+")\n{")  ;
 		emit("int _changed = FALSE;");
@@ -175,6 +187,7 @@ public class Codegen implements AstVisitor
 				emit(" = &"+ get_prop_type(node,Type.Types.NODE)+"->attribute_"+at.id.id+";\n");
 			}
 		}
+		int i=0;
 		for(Tuple edge : edge_items) {
 			String src = get_prop_name(edge,"src");
 			String dst = get_prop_name(edge,"dst");
@@ -185,8 +198,9 @@ public class Codegen implements AstVisitor
 					continue;
 				declared.add(at.var.id);
 				emit(this.typeToString(typedefs.get(at.id.id))+" "+at.var.id);
-				emit(" = &"+ src+"->out_edges["+dst+"->id]->attribute_"+at.id.id+";\n");
+				emit(" = &e"+i+"->attribute_"+at.id.id+";\n");
 			}
+			i++;
 		}
 	}
 	public void CheckGuard(OpDef def)
@@ -214,6 +228,9 @@ public class Codegen implements AstVisitor
 		for (int i=0; i<node_names.size();i++) {
 			String s = node_names.get(i);
 			argbuilder.append("Node* " + s + ((i < node_names.size()-1) ? "," : ""));
+		}
+		for (int i=0; i<edge_items.size();i++) {
+			argbuilder.append(", Edge *e" + i);
 		}
 		emit("__device__ inline int _checkguard_"+def.id.id+"("+argbuilder+")\n{");
 		emitGets(node_items,edge_items);
@@ -257,6 +274,9 @@ public class Codegen implements AstVisitor
 		for (int i=0; i<node_names.size();i++) {
 			String s = node_names.get(i);
 			argbuilder.append("Node* " + s + ((i < node_names.size()-1) ? "," : ""));
+		}
+		for (int i=0; i<edge_items.size();i++) {
+			argbuilder.append(", Edge *e" + i);
 		}
 		emit("__device__ inline int _checkshape_"+def.id.id+"("+argbuilder+")\n{");
 		for (int i=0;i<node_items.size();i++) {
