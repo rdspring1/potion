@@ -79,10 +79,11 @@ public class Codegen implements AstVisitor
 			//choose which edges we are iterating over, in edges or out edges
 			//if the first node is the src then out_edges, otherwise first node is dest and go for in_edges
 			String edge_map = (node_names.get(0).equals(get_prop_name(edge_items.get(0),"src"))) ? "out_edges" : "in_edges";
+			String edge_side = (node_names.get(0).equals(get_prop_name(edge_items.get(0),"src"))) ? "dst" : "src";
 			//iterate over edges like a boss
-			//emit("for( std::map<int,Edge*>::iterator _it="+node_names.get(0)+"->"+edge_map+".begin(); _it != " +node_names.get(0)+"->"+edge_map+".end(); ++it) {");
 			emit("for(int _i = 0; _i < "+node_names.get(0)+"->"+edge_map+"_size ; _i++) {");
-			emit(node_names.get(1)+ " = "+node_names.get(0)+"->" + edge_map+"[_i];");
+			emit("e0 = "+node_names.get(0)+"->" + edge_map+"[_i];");
+			emit(node_names.get(1)+" = e0->"+edge_side+";");
 			emit("*changed |= _apply_"+def.id.id+"("+params+");");
 			emit("}");
 
