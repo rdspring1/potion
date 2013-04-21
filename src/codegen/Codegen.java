@@ -38,6 +38,29 @@ public class Codegen implements AstVisitor
 	}
 	public void accept(OpDef def)
 	{
+		//TODO: Move this out to a common place, seriously
+		List<Tuple> node_items = new ArrayList<Tuple>();
+		List<String> node_names = new ArrayList<String>();
+		List<Tuple> edge_items = new ArrayList<Tuple>();
+		List<Attribute> attributes = new ArrayList<Attribute>();
+		for(Tuple t: def.exp.tuples){
+			for(Attribute at : t.attributes)
+				attributes.add(at);
+			switch(t.type) {
+			case NODES:
+				node_items.add(t);
+				node_names.add(get_prop_type(t,Type.Types.NODE));
+				break;
+			case EDGES:
+				edge_items.add(t);
+				break;
+			}
+		}
+		StringBuilder parambuilder = new StringBuilder(""); //for params to function calls(keep the order right)
+		for (int i=0; i<node_names.size();i++) {
+			String s = node_names.get(i);
+			parambuilder.append(s + ((i < node_names.size()-1) ? "," : " "));
+		}
 		//write our helper methods...
 		CheckShape(def);
 		CheckGuard(def);
@@ -47,7 +70,7 @@ public class Codegen implements AstVisitor
 		//Kernel needs to handle getting the values for the apply. I'm not sure on how to do this right now
 		//Elixir paper explains it a bit but Im not sure I follow the non-slow version.. :(
 		//print variables so we have them all
-		emit("__global__ void _kernel_"+def.id.id+"(...) \n{");
+		emit("__global__ void _kernel_"+def.id.id+"(int *chaged, ...) \n{");
 		java.util.Set<String> declared = new HashSet<String>();
 		for(Tuple t : def.exp.tuples) {
 			for(Attribute at : t.attributes) {
@@ -56,6 +79,29 @@ public class Codegen implements AstVisitor
 				emit(this.typeToString(typedefs.get(at.id.id))+" "+at.var.id+";\n");
 				declared.add(at.var.id);
 			}
+		}
+		//Handle our easy cases.
+		//empty args, just call apply
+		if(def.exp.tuples.size() == 0) {
+			emit("*changed = _apply_"+def.id.id+"();");
+		} else if(node_items.size() == 1) {
+			emit("int _id = threadIdx.x;");
+			emit(node_names.get(0)+ " = _get_node(_id);");
+			emit("*changed = _apply_"+def.id.id+"("+parambuilder+");");
+		} else if(node_items.size() == 2 && edge_items.size() == 1) {
+			emit("int id = threadIdx.x;");
+			emit(node_names.get(0)+ " = _get_node(id);");
+			//choose which edges we are iterating over, in edges or out edges
+			//if the first node is the src then out_edges, otherwise first node is dest and go for in_edges
+			String edge_map = (node_names.get(0).equals(get_prop_name(edge_items.get(0),"src"))) ? "out_edges" : "in_edges";
+			//iterate over edges like a boss
+			emit("for( std::map<int,Edge*>::iterator _it="+node_names.get(0)+"->"+edge_map+".begin(); _it != " +node_names.get(0)+"->"+edge_map+".end(); ++it) {");
+			emit(node_names.get(1)+ " = _it -> second->dst;");
+			emit("*changed = _apply_"+def.id.id+"("+parambuilder+");");
+			emit("}");
+
+		} else {
+			System.err.println("Unsupported operation format");
 		}
 		emit("}\n");
 		
@@ -87,27 +133,32 @@ public class Codegen implements AstVisitor
 			argbuilder.append("Node* " + s + ((i < node_names.size()-1) ? "," : ""));
 			parambuilder.append(s + ((i < node_names.size()-1) ? "," : " "));
 		}
-		emit("__device__ inline void _apply_"+def.id.id+"("+argbuilder+")\n{")  ;
+		emit("__device__ inline int _apply_"+def.id.id+"("+argbuilder+")\n{")  ;
+		emit("int _changed = FALSE;");
 		emit("if(!_checkshape_"+def.id.id+"("+parambuilder+")) return;");
-		//TODO: Sort nodes for locking
+		//Make the array of nodes for locking
 		StringBuilder nodebuilder = new StringBuilder();
 		for(String s : node_names)
 			nodebuilder.append(s+",");
 		emit("Node *_nodes[] = {"+nodebuilder+"};");
+		//sort them so we don't get in a deadlock
 		emit("_sort(nodes,"+node_names.size()+");");
 		//Lock
 		for(int i=0;i<node_names.size();i++)
 			emit("nodes["+i+"].lock();");
-
+		//now get all the needed attributes
 		emitGets(node_items,edge_items);
 		//guard check
 		emit("if(_checkguard_"+def.id.id+"("+parambuilder+")) {");
 		for(Assignment assignment : def.exp.assignments)
 			assignment.visit(this);
+		//TODO: Do we need to emit better code than this or is passing the guard enough to set changed to true?
+		emit("_changed=TRUE;");
 		emit("}"); //close to if checkguard
 		//unlock
 		for(int i=0;i<node_names.size();i++)
 			emit("nodes["+i+"].unlock();");
+		emit("return _changed;");
 		emit("}\n");
 	}
 	public void emitGets(List<Tuple> node_items, List<Tuple> edge_items)
@@ -121,7 +172,7 @@ public class Codegen implements AstVisitor
 					continue;
 				declared.add(at.var.id);
 				emit(this.typeToString(typedefs.get(at.id.id))+" "+at.var.id);
-				emit(" = "+ get_prop_type(node,Type.Types.NODE)+"->"+at.id.id+";\n");
+				emit(" = &"+ get_prop_type(node,Type.Types.NODE)+"->attribute_"+at.id.id+";\n");
 			}
 		}
 		for(Tuple edge : edge_items) {
@@ -134,7 +185,7 @@ public class Codegen implements AstVisitor
 					continue;
 				declared.add(at.var.id);
 				emit(this.typeToString(typedefs.get(at.id.id))+" "+at.var.id);
-				emit(" = "+ src+"->_out_edges["+dst+"->_id]->"+at.id.id+";\n");
+				emit(" = &"+ src+"->out_edges["+dst+"->id]->attribute_"+at.id.id+";\n");
 			}
 		}
 	}
