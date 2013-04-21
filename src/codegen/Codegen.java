@@ -49,7 +49,7 @@ public class Codegen implements AstVisitor
 		CheckGuard(def);
 		Apply(def);
 
-		emit("__global__ void _kernel_"+def.id.id+"(int *chaged, ...) \n{");
+		emit("__global__ void _kernel_"+def.id.id+"(bool *chaged, int unroll) \n{");
 		//Emit edge/node decls
 		int num_edges = 0;
 		for(Tuple t : def.exp.tuples) {
@@ -63,7 +63,7 @@ public class Codegen implements AstVisitor
 			}
 		}
 		//default changed to false
-		emit("*changed = FALSE;");
+		emit("*changed = false;");
 		//TODO: Current supporting three types of ops, Global, 1 vertex, 2 verts with shared edge
 
 		//empty args, just call apply
@@ -104,8 +104,8 @@ public class Codegen implements AstVisitor
 		//Generate the apply
 		String params = get_param_string(node_names,edge_items);
 		String args = get_arg_string(node_names,edge_items);
-		emit("__device__ inline int _apply_"+def.id.id+"("+args+")\n{")  ;
-		emit("int _changed = FALSE;");
+		emit("__device__ inline bool _apply_"+def.id.id+"("+args+")\n{")  ;
+		emit("bool _changed = false;");
 		emit("if(!_checkshape_"+def.id.id+"("+params+")) return;");
 		//Make the array of nodes for locking
 		StringBuilder nodebuilder = new StringBuilder();
@@ -124,7 +124,7 @@ public class Codegen implements AstVisitor
 		for(Assignment assignment : def.exp.assignments)
 			assignment.visit(this);
 		//TODO: Do we need to emit better code than this or is passing the guard enough to set changed to true?
-		emit("_changed=TRUE;");
+		emit("_changed=true;");
 		emit("}"); //close to if checkguard
 		//unlock
 		for(int i=0;i<node_names.size();i++)
@@ -144,7 +144,7 @@ public class Codegen implements AstVisitor
 		String args = get_arg_string(node_names,edge_items);
 
 
-		emit("__device__ inline int _checkguard_"+def.id.id+"("+args+")\n{");
+		emit("__device__ inline bool _checkguard_"+def.id.id+"("+args+")\n{");
 		emitGets(node_items,edge_items);
 		emit("return ");
 		def.exp.bexp.visit(this);
@@ -170,21 +170,21 @@ public class Codegen implements AstVisitor
 		List<Tuple> edge_items = get_edge_items(def.exp.tuples);
 		List<Attribute> attributes = get_attributes(def.exp.tuples);
 		String args = get_arg_string(node_names,edge_items);
-		emit("__device__ inline int _checkshape_"+def.id.id+"("+args+")\n{");
+		emit("__device__ inline bool _checkshape_"+def.id.id+"("+args+")\n{");
 		for (int i=0;i<node_items.size();i++) {
 			for (int j=0;j<i;j++) {
 				String ni = get_prop_type(node_items.get(i),Type.Types.NODE);
 				String nj = get_prop_type(node_items.get(j),Type.Types.NODE);
-				emit("if("+nj+"=="+ni+") return FALSE;");
+				emit("if("+nj+"=="+ni+") return false;");
 			}
 		}
 		for (int i=0;i<edge_items.size();i++) {
 			//emit code checking Edge(src,dst). Assume all edges have a src and dst, if not W/E.
 			String src = get_prop_name(edge_items.get(i),"src");
 			String dst = get_prop_name(edge_items.get(i),"dst");
-			emit("if(!Edge("+src+","+dst+")) return FALSE;");
+			emit("if(!_edge("+src+","+dst+")) return false;");
 		}
-		emit("return TRUE;\n}\n");
+		emit("return true;\n}\n");
 	}
 	private void emit(String s)
 	{
@@ -263,11 +263,11 @@ public class Codegen implements AstVisitor
 	}
 	public void accept(True exp)
 	{
-		emit("TRUE");
+		emit("true");
 	}
 	public void accept(False exp)
 	{
-		emit("FALSE");
+		emit("false");
 	}
 	public void accept(Times exp)
 	{

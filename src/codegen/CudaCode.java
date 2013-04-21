@@ -9,7 +9,7 @@ public class CudaCode
 	 */
 	public static String helpers()
 	{
-		return sort() + graphDecl();
+		return sort() + graphDecl() + edge();
 	}
 	public static String sort()
 	{
@@ -30,7 +30,7 @@ public class CudaCode
 		//For now let's make edge a noop
 		return "__device__ inline bool _edge(Node *a, Node *b) {return true;}\n";
 	}
-	public static String edge()
+	public static String edgeClass()
 	{
 		String base =
 			"class Edge {"+
@@ -39,9 +39,9 @@ public class CudaCode
 			"__device__ Node* dst;";
 		//TODO: Add in attributes here
 		String from_attrs = "";
-		return base +from_attrs + "};\n"
+		return base +from_attrs + "};\n";
 	}
-	public static String node()
+	public static String nodeClass()
 	{
 		String base =
 			"class Node {"+
