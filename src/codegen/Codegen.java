@@ -23,11 +23,13 @@ public class Codegen implements AstVisitor
 	{
 		//TODO: Print our shared library code, classes loaders etc
 		p.graph.visit(this);
+		emit(CudaCode.weakDefs());
 		emit(CudaCode.edgeClass(edge_attributes));
 		emit(CudaCode.nodeClass(node_attributes));
 		emit(CudaCode.helpers());
 		for(Def d: p.defs)
 			d.visit(this);
+		emit(CudaCode.genMain());
 	}
 	public void accept(Graph g)
 	{
@@ -88,7 +90,7 @@ public class Codegen implements AstVisitor
 			String edge_side = (node_names.get(0).equals(get_prop_name(edge_items.get(0),"src"))) ? "dst" : "src";
 			//iterate over edges like a boss
 			emit("for(int _i = 0; _i < "+node_names.get(0)+"->"+edge_map+"_size ; _i++) {");
-			emit("e0 = "+node_names.get(0)+"->" + edge_map+"[_i];");
+			emit("e0 = &"+node_names.get(0)+"->" + edge_map+"[_i];");
 			emit(node_names.get(1)+" = e0->"+edge_side+";");
 			emit("changed |= _apply_"+def.id.id+"("+params+");");
 			emit("}");
@@ -111,20 +113,20 @@ public class Codegen implements AstVisitor
 
 		//Generate the apply
 		String params = get_param_string(node_names,edge_items);
-		String args = get_arg_string(node_names,edge_items);
+		String args = get_arg_string(node_names,edge_items,false);
 		emit("__device__ inline bool _apply_"+def.id.id+"("+args+")\n{")  ;
 		emit("bool _changed = false;");
-		emit("if(!_checkshape_"+def.id.id+"("+params+")) return;");
+		emit("if(!_checkshape_"+def.id.id+"("+params+")) return false;");
 		//Make the array of nodes for locking
 		StringBuilder nodebuilder = new StringBuilder();
 		for(String s : node_names)
 			nodebuilder.append(s+",");
 		emit("Node *_nodes[] = {"+nodebuilder+"};");
 		//sort them so we don't get in a deadlock
-		emit("_sort(nodes,"+node_names.size()+");");
+		emit("_sort(_nodes,"+node_names.size()+");");
 		//Lock
 		for(int i=0;i<node_names.size();i++)
-			emit("nodes["+i+"].lock();");
+			emit("_nodes["+i+"]->lock();");
 		//now get all the needed attributes
 		emitGets(node_items,edge_items);
 		//guard check
@@ -136,7 +138,7 @@ public class Codegen implements AstVisitor
 		emit("}"); //close to if checkguard
 		//unlock
 		for(int i=0;i<node_names.size();i++)
-			emit("nodes["+i+"].unlock();");
+			emit("_nodes["+i+"]->unlock();");
 		emit("return _changed;");
 		emit("}\n");
 	}
@@ -149,7 +151,7 @@ public class Codegen implements AstVisitor
 		List<Tuple> edge_items = get_edge_items(def.exp.tuples);
 		List<Attribute> attributes = get_attributes(def.exp.tuples);
 
-		String args = get_arg_string(node_names,edge_items);
+		String args = get_arg_string(node_names,edge_items,true);
 
 
 		emit("__device__ inline bool _checkguard_"+def.id.id+"("+args+")\n{");
@@ -177,7 +179,7 @@ public class Codegen implements AstVisitor
 		List<String> node_names = get_node_names(def.exp.tuples);
 		List<Tuple> edge_items = get_edge_items(def.exp.tuples);
 		List<Attribute> attributes = get_attributes(def.exp.tuples);
-		String args = get_arg_string(node_names,edge_items);
+		String args = get_arg_string(node_names,edge_items,false);
 		emit("__device__ inline bool _checkshape_"+def.id.id+"("+args+")\n{");
 		for (int i=0;i<node_items.size();i++) {
 			for (int j=0;j<i;j++) {
@@ -494,15 +496,15 @@ public class Codegen implements AstVisitor
 		return parambuilder.toString();
 	}
 
-	public String get_arg_string(List<String> node_names, List<Tuple> edge_items)
+	public String get_arg_string(List<String> node_names, List<Tuple> edge_items, boolean restrict)
 	{
 		StringBuilder argbuilder = new StringBuilder(""); //for the args coming in
 		for (int i=0; i<node_names.size();i++) {
 			String s = node_names.get(i);
-			argbuilder.append(" Node* __restrict__ " + s + ((i < node_names.size()-1) ? "," : ""));
+			argbuilder.append(" Node* "+(restrict?  "__restrict__ " : "")+ s + ((i < node_names.size()-1) ? "," : ""));
 		}
 		for (int i=0; i<edge_items.size();i++) {
-			argbuilder.append(", Edge* __restrict __ e" + i);
+			argbuilder.append(", Edge* "+(restrict?  "__restrict__ " : "")+ "e" + i);
 		}
 		return argbuilder.toString();
 	}

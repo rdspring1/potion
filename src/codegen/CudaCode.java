@@ -11,7 +11,11 @@ public class CudaCode
 	 */
 	public static String helpers()
 	{
-		return sort() + globals() + edge() + genMain();
+		return globals() + loadGraph() + sort() + edge() + getNode();
+	}
+	public static String weakDefs()
+	{
+		return "class Node; class Edge;\n";
 	}
 	public static String sort()
 	{
@@ -27,6 +31,10 @@ public class CudaCode
 	{
 		return "__device__ Node * graph;\n"+
 			"__device__ bool *_gchanged;\n";
+	}
+	public static String getNode()
+	{
+		return "__device__ inline Node* _get_node(int id){return &graph[id];}";
 	}
 	public static String edge()
 	{
@@ -74,6 +82,7 @@ public class CudaCode
 			" int id;"+
 			"__device__ void lock();"+
 			"__device__ void unlock();"+
+			"__device__ inline bool operator==(const Node& rhs){ return this->id == rhs.id; }"+
 			" Edge *in_edges;"+
 			" int in_edges_size;"+
 			" Edge *out_edges;"+
@@ -106,7 +115,7 @@ public class CudaCode
 
 	public static String loadGraph()
 	{
-		return "void load_graph(char* fname) {i}\n";
+		return "void load_graph(char* fname) {}\n";
 	}
 	public static String genMain()
 	{
