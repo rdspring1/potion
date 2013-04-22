@@ -1,4 +1,6 @@
 package codegen;
+import ast.*;
+import java.util.*;
 /*
  * Helpful class containing all our C++ code that we output
  */
@@ -31,34 +33,77 @@ public class CudaCode
 		//For now let's make edge a noop
 		return "__device__ inline bool _edge(Node *a, Node *b) {return true;}\n";
 	}
-	public static String edgeClass()
+
+
+	public static String edgeClass(List<AttributeDef> edge_attributes)
 	{
 		String base =
 			"class Edge {"+
 			"public:"+
-			"__device__ Node* src;"+
-			"__device__ Node* dst;";
+			" Node* src;"+
+			" Node* dst;";
 		//TODO: Add in attributes here
-		String from_attrs = "";
+		StringBuilder from_attrs = new StringBuilder("");
+		for (AttributeDef def : edge_attributes) {
+			//src and dst are handled implicitly
+			if(def.id.id.equals("src") || def.id.id.equals("dst"))
+				continue;
+			switch(def.type.of){
+			case FLOAT:
+				from_attrs.append("float");
+				break;
+			case INT:
+				from_attrs.append("int");
+				break;
+			case NODE:
+				from_attrs.append("Node*");
+				break;
+			case EDGE:
+				from_attrs.append("Node*");
+				break;
+			}
+			from_attrs.append(" attribute_"+def.id.id+";");
+		}
 		return base +from_attrs + "};\n";
 	}
-	public static String nodeClass()
+	public static String nodeClass(List<AttributeDef> node_attributes)
 	{
 		String base =
 			"class Node {"+
 			"public:"+
-			"__device__ int id;"+
+			" int id;"+
 			"__device__ void lock();"+
 			"__device__ void unlock();"+
-			"__device__ Edge *in_edges;"+
-			"__device__ int in_edges_size;"+
-			"__device__ Edge *out_edges;"+
-			"__device__ int out_edges_size;";
+			" Edge *in_edges;"+
+			" int in_edges_size;"+
+			" Edge *out_edges;"+
+			" int out_edges_size;";
 		//TODO: this
-		String from_attrs ="";
+		StringBuilder from_attrs = new StringBuilder("");
+		for (AttributeDef def : node_attributes) {
+			//node is handled implicitly
+			if(def.id.id.equals("node"))
+				continue;
+			switch(def.type.of){
+			case FLOAT:
+				from_attrs.append("float");
+				break;
+			case INT:
+				from_attrs.append("int");
+				break;
+			case NODE:
+				from_attrs.append("Node*");
+				break;
+			case EDGE:
+				from_attrs.append("Node*");
+				break;
+			}
+			from_attrs.append(" attribute_"+def.id.id+";");
+		}
 		String function_decls = "";
 		return base + from_attrs+"};"+function_decls+"\n";
 	}
+
 	public static String loadGraph()
 	{
 		return "void load_graph(char* fname) {i}\n";

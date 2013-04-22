@@ -12,6 +12,8 @@ public class Codegen implements AstVisitor
 {
 	private Map<String,Type> typedefs;
 	private OutputStreamWriter writer;
+	private List<AttributeDef> node_attributes;
+	private List<AttributeDef> edge_attributes;
 	public Codegen(OutputStreamWriter writer)
 	{
 		typedefs = new HashMap<String,Type>();
@@ -20,13 +22,17 @@ public class Codegen implements AstVisitor
 	public void accept(Program p)
 	{
 		//TODO: Print our shared library code, classes loaders etc
-		emit(CudaCode.helpers());
 		p.graph.visit(this);
+		emit(CudaCode.edgeClass(edge_attributes));
+		emit(CudaCode.nodeClass(node_attributes));
+		emit(CudaCode.helpers());
 		for(Def d: p.defs)
 			d.visit(this);
 	}
 	public void accept(Graph g)
 	{
+		this.node_attributes = g.natts;
+		this.edge_attributes = g.eatts;
 		for(AttributeDef attdef : g.natts)
 			typedefs.put(attdef.id.id,attdef.type);
 		for(AttributeDef attdef : g.eatts)
@@ -531,4 +537,6 @@ public class Codegen implements AstVisitor
 			i++;
 		}
 	}
+
+
 }
