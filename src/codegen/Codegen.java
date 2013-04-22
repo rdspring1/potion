@@ -181,8 +181,8 @@ public class Codegen implements AstVisitor
 		emit("__device__ inline bool _checkshape_"+def.id.id+"("+args+")\n{");
 		for (int i=0;i<node_items.size();i++) {
 			for (int j=0;j<i;j++) {
-				String ni = get_prop_type(node_items.get(i),Type.Types.NODE);
-				String nj = get_prop_type(node_items.get(j),Type.Types.NODE);
+				String ni = get_prop_name(node_items.get(i),"node");
+				String nj = get_prop_name(node_items.get(j),"node");
 				emit("if("+nj+"=="+ni+") return false;");
 			}
 		}
@@ -420,9 +420,9 @@ public class Codegen implements AstVisitor
 	{
 		switch(t){
 		case FLOAT:
-			return "restrict float*";
+			return "float* __restrict__";
 		case INT:
-			return "restrict int*";
+			return "int* __restrict__";
 		case NODE:
 			return "Node*";
 		case EDGE:
@@ -499,10 +499,10 @@ public class Codegen implements AstVisitor
 		StringBuilder argbuilder = new StringBuilder(""); //for the args coming in
 		for (int i=0; i<node_names.size();i++) {
 			String s = node_names.get(i);
-			argbuilder.append("Node* " + s + ((i < node_names.size()-1) ? "," : ""));
+			argbuilder.append(" Node* __restrict__ " + s + ((i < node_names.size()-1) ? "," : ""));
 		}
 		for (int i=0; i<edge_items.size();i++) {
-			argbuilder.append(", Edge *e" + i);
+			argbuilder.append(", Edge* __restrict __ e" + i);
 		}
 		return argbuilder.toString();
 	}
@@ -526,7 +526,8 @@ public class Codegen implements AstVisitor
 			String src = get_prop_name(edge,"src");
 			String dst = get_prop_name(edge,"dst");
 			for(Attribute at : edge.attributes) {
-				if(this.typedefs.get(at.id.id).of == Type.Types.NODE)
+				//src and dst should be passed into the function always. don't fetch them.
+				if(at.var.id.equals(src) || at.var.id.equals(dst))
 					continue;
 				if(declared.contains(at.var.id))
 					continue;
