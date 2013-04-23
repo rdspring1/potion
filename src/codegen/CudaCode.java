@@ -80,8 +80,6 @@ public class CudaCode
 			"class Node {"+
 			"public:"+
 			" int id;"+
-			"__device__ void lock();"+
-			"__device__ void unlock();"+
 			"__device__ inline bool operator==(const Node& rhs){ return this->id == rhs.id; }"+
 			" Edge *in_edges;"+
 			" int in_edges_size;"+

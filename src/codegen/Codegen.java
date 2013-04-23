@@ -117,16 +117,6 @@ public class Codegen implements AstVisitor
 		emit("__device__ inline bool _apply_"+def.id.id+"("+args+")\n{")  ;
 		emit("bool _changed = false;");
 		emit("if(!_checkshape_"+def.id.id+"("+params+")) return false;");
-		//Make the array of nodes for locking
-		StringBuilder nodebuilder = new StringBuilder();
-		for(String s : node_names)
-			nodebuilder.append(s+",");
-		emit("Node *_nodes[] = {"+nodebuilder+"};");
-		//sort them so we don't get in a deadlock
-		emit("_sort(_nodes,"+node_names.size()+");");
-		//Lock
-		for(int i=0;i<node_names.size();i++)
-			emit("_nodes["+i+"]->lock();");
 		//now get all the needed attributes
 		emitGets(node_items,edge_items);
 		//guard check
@@ -136,9 +126,6 @@ public class Codegen implements AstVisitor
 		//TODO: Do we need to emit better code than this or is passing the guard enough to set changed to true?
 		emit("_changed=true;");
 		emit("}"); //close to if checkguard
-		//unlock
-		for(int i=0;i<node_names.size();i++)
-			emit("_nodes["+i+"]->unlock();");
 		emit("return _changed;");
 		emit("}\n");
 	}
