@@ -7,3 +7,4 @@ src/TokenMgrError.java
 src/Token.java
 bin
 *.class
+*.swp
