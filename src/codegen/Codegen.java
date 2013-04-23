@@ -29,6 +29,7 @@ public class Codegen implements AstVisitor
 		emit(CudaCode.helpers());
 		for(Def d: p.defs)
 			d.visit(this);
+		emit(CudaCode.loadGraph(edge_attributes));
 		emit(CudaCode.genMain());
 	}
 	public void accept(Graph g)
@@ -57,7 +58,7 @@ public class Codegen implements AstVisitor
 		CheckGuard(def);
 		Apply(def);
 
-		emit("__global__ void _kernel_"+def.id.id+"(bool *gchanged, int unroll) \n{");
+		emit("__global__ void _kernel_"+def.id.id+"(int unroll) \n{");
 		//Emit edge/node decls
 		int num_edges = 0;
 		for(Tuple t : def.exp.tuples) {
@@ -73,16 +74,16 @@ public class Codegen implements AstVisitor
 		//default changed to false
 		emit("bool changed = false;");
 		//TODO: Current supporting three types of ops, Global, 1 vertex, 2 verts with shared edge
+		emit("unsigned int _id = (blockIdx.x * blockDim.x + threadIdx.x);");
+		emit("if (_id < _num_nodes) {");
 
 		//empty args, just call apply
 		if(def.exp.tuples.size() == 0) {
 			emit("changed = _apply_"+def.id.id+"();");
 		} else if(node_items.size() == 1) {
-			emit("int _id = threadIdx.x;");
 			emit(node_names.get(0)+ " = _get_node(_id);");
 			emit("changed = _apply_"+def.id.id+"("+params+");");
 		} else if(node_items.size() == 2 && edge_items.size() == 1) {
-			emit("int _id = threadIdx.x;");
 			emit(node_names.get(0)+ " = _get_node(_id);");
 			//choose which edges we are iterating over, in edges or out edges
 			//if the first node is the src then out_edges, otherwise first node is dest and go for in_edges
@@ -98,8 +99,9 @@ public class Codegen implements AstVisitor
 		} else {
 			System.err.println("Unsupported operation format");
 		}
-		emit("if (changed) *gchanged = true;");
-		emit("\n}\n");
+		emit("if (changed) *_gchanged = true;");
+		emit("}\n"); //end if(_id < num_nodes)
+		emit("\n}\n"); //end the function
 		
 	}
 	public void Apply(OpDef def)
