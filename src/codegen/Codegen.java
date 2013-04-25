@@ -22,13 +22,14 @@ public class Codegen implements AstVisitor
 	public void accept(Program p)
 	{
 		//TODO: Print our shared library code, classes loaders etc
+		emit(CudaCode.headers());
 		p.graph.visit(this);
 		emit(CudaCode.weakDefs());
 		emit(CudaCode.edgeClass(edge_attributes));
 		emit(CudaCode.nodeClass(node_attributes));
-		emit(CudaCode.helpers());
 		for(Def d: p.defs)
 			d.visit(this);
+		emit(CudaCode.helpers());
 		emit(CudaCode.loadGraph(edge_attributes));
 		emit(CudaCode.genMain());
 	}
@@ -58,7 +59,7 @@ public class Codegen implements AstVisitor
 		CheckGuard(def);
 		Apply(def);
 
-		emit("__global__ void _kernel_"+def.id.id+"(int unroll) \n{");
+		emit("__global__ void _kernel_"+def.id.id+"(int unroll, unsigned _num_nodes) \n{");
 		//Emit edge/node decls
 		int num_edges = 0;
 		for(Tuple t : def.exp.tuples) {
@@ -339,11 +340,11 @@ public class Codegen implements AstVisitor
 	}
 	public void accept(Iterate f)
 	{
-		emit("cudaMemset(_gchanged,false,sizeof(bool));");
+		emit("cudaMemset(_ghchanged,false,sizeof(bool));");
 		emit("changed = false;");
 		emit("while(!changed) {");
 		f.exp.visit(this);
-		emit("cudaMemcpy(&changed, _gchanged,sizeof(bool), cudaMemcpyDeviceToHost);");
+		emit("cudaMemcpy(&changed, _ghchanged,sizeof(bool), cudaMemcpyDeviceToHost);");
 		emit("}");
 		//TODO
 	}
@@ -362,7 +363,7 @@ public class Codegen implements AstVisitor
 	}
 	public void accept(SchedExp exp)
 	{
-		emit("_kernel_"+exp.id.id+"<GRID,THREADS>(_gchanged,"+exp.unroll+");");
+		emit("_kernel_"+exp.id.id+"<<<GRID,THREADS>>>("+exp.unroll+",num_nodes);");
 	}
 	public void accept(ActionDef def)
 	{
@@ -379,6 +380,7 @@ public class Codegen implements AstVisitor
 	}
 	public void accept(Global global)
 	{
+		emit("__device__ ");
 		global.type.visit(this);
 		emit(" "+global.name.id+";");
 	}

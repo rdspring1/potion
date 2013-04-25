@@ -15,7 +15,9 @@ public class CudaCode
 	}
 	public static String weakDefs()
 	{
-		return "class Node; class Edge;\n";
+		return "class Node; class Edge; __device__ inline Node*_get_node(int);__device__ inline bool _edge(Node* Node*);"+
+			"__device__ inline void _sort(Node**, int);"+
+			"__global__ void _graph_init(Node* g, Edge* oute,unsigned num_nodes, unsigned num_edges,bool *gchanged);\n";
 	}
 	public static String sort()
 	{
@@ -33,8 +35,10 @@ public class CudaCode
 			"__device__ Edge *_out_edges;\n"+
 			"__device__ Edge *_in_edges;\n"+
 			"__device__ bool *_gchanged;\n"+
+			"bool *_ghchanged;\n"+
 			"unsigned num_edges;\n"+
-			"unsigned num_nodes;\n";
+			"unsigned num_nodes;\n"+
+			"unsigned THREADS;unsigned GRID;\n";
 		
 	}
 	public static String getNode()
@@ -119,25 +123,57 @@ public class CudaCode
 	public static String graphInit()
 	{
 		return ""+
-		"__global__ void _graph_init(unsigned num_nodes, unsigned num_edges)\n"+
+		"__global__ void _graph_init(Node* g, Edge* oute,unsigned num_nodes, unsigned num_edges,bool *gchanged)\n"+
 		"{\n"+
+		"      _graph = g; _out_edges = oute; _gchanged = gchanged;"+
 		"	Edge *start = _out_edges;"+
 		"	for(unsigned i=0;i<num_nodes;i++){"+
 		"		_graph[i].out_edges = start;"+
 		"		for(unsigned j=0;j<_graph[i].out_edges_size;i++) {"+
-		"			start[j].src = _graph[i];"+
-		"			start[j].dst = _graph[dst_index];"+
+		"			start[j].src = &_graph[i];"+
+		"			start[j].dst = &_graph[start[j].dst_index];"+
 		"		}"+
 		"		start += _graph[i].out_edges_size;"+
 		"	}\n"+
 		"}\n";
 
 	}
+	public static String headers()
+	{
+		return "#include <stdio.h>\n"+
+"#include <time.h>\n"+
+"#include <fstream>\n"+
+"#include <string>\n"+
+"#include <iostream>\n"+
+"#include <limits>\n"+
+"#include <string.h>\n"+
+""+
+"#include <unistd.h>\n"+
+"#include <cassert>\n"+
+"#include <inttypes.h>\n"+
+"#include <unistd.h>\n"+
+"#include <stdio.h>\n"+
+"#include <time.h>\n"+
+"#include <sys/time.h>\n"+
+"#include <stdlib.h>\n"+
+"#include <stdarg.h>\n"+
+"#include <sys/mman.h>\n"+
+"#include <sys/stat.h>\n"+
+"#include <sys/types.h>\n"+
+"#include <fcntl.h>\n"+
+"#include <unistd.h>\n"+
+"#include <cassert>\n"+
+"#include <inttypes.h>\n"+
+"#define le64toh(x) (x)\n"+
+"#define le32toh(x) (x)\n";
+	}
 	public static String genMain()
 	{
 		String main =
 			"int main(int argc, char **argv)"+
 			"{"+
+			"THREADS=256;"+
+			"GRID = (num_nodes+255)/threads;"+
 			"load_graph(argv[1]);"+
 			"_action_main();"+
 			"return 0;" +
@@ -157,7 +193,7 @@ public class CudaCode
 			break;
 		}
 		return ""+
-			"int load_graph(char* fle)"+
+			"int load_graph(char* file)"+
 			"{"+
 			""+
 			"std::ifstream cfile;"+
@@ -200,11 +236,10 @@ public class CudaCode
 			"unsigned  *edgeData = (unsigned *)fptr32;"+
 			"num_nodes = numNodes;"+
 			"num_edges = numEdges;"+
-			"Node *host_nodes = malloc(sizeof(Node)*num_nodes);"+
-			"Edge *host_edges = malloc(sizeof(Edge)*num_edges);"+
-			"unsigned edge_index = 0;"+
-			"for (unsigned ii = 0; ii < nnodes; ++ii) {"+
-			"srcsrc[ii] = ii;"+
+			"Node *host_nodes = (Node*)malloc(sizeof(Node)*num_nodes);"+
+			"Edge *host_edges = (Edge*)malloc(sizeof(Edge)*num_edges);"+
+			"unsigned edge_index = 1;"+
+			"for (unsigned ii = 0; ii < num_nodes; ++ii) {"+
 			"unsigned psrc, noutgoing; "+
 			"if (ii > 0) {"+
 			"psrc = le64toh(outIdx[ii - 1]) + 1;"+
@@ -215,23 +250,24 @@ public class CudaCode
 			"}"+
 			"host_nodes[ii].out_edges_size = noutgoing;"+
 			"for (unsigned jj = 0; jj < noutgoing; ++jj) {"+
-			"unsigned dst = le32toh(outs[edgeindex - 1]);"+
-			"if (dst >= nnodes) printf(\"\\tinvalid edge from %d to %d at index %d(%d).\\n\", ii, dst, jj, edgeindex);"+
+			"unsigned dst = le32toh(outs[edge_index - 1]);"+
+			"if (dst >= num_nodes) printf(\"\\tinvalid edge from %d to %d at index %d(%d).\\n\", ii, dst, jj, edge_index);"+
 
-			"host_edges[jj]."+edge_attr+" = edgeData[edgeindex - 1];"+
+			"host_edges[jj]."+edge_attr+" = edgeData[edge_index - 1];"+
 			"host_edges[jj].dst_index = dst;"+
 			""+
-			"hist_nodes[dst].in_edges_size++;"+
+			"host_nodes[dst].in_edges_size++;"+
 			"++edge_index;"+
 			"}"+
 			"}"+
 			"cfile.close();"+
-			"cudaMalloc(_graph,sizeof(Node)*num_nodes);"+
-			"cudaMalloc(_out_edges,sizeof(Edge)*num_edges);"+
-			"cudaMalloc(_out_edges,sizeof(Edge)*num_edges);"+
-			"cudaMemcpyToSymbol(\"_graph\",host_nodes,sizeof(Node)*num_nodes,0,cudaMemcpyHostToDevice);"+
-			"cudaMemcpyToSymbol(\"_out_edges\",host_edges,sizeof(Edge)*num_edges,0,cudaMemcpyHostToDevice);"+
-			"_graph_init<1,1>(num_nodes,num_edges);"+
+			"Node *g; Edge* oute;"+
+			"cudaMalloc((void**)&g,sizeof(Node)*num_nodes);"+
+			"cudaMalloc((void**)&oute,sizeof(Edge)*num_edges);"+
+			"cudaMemcpy((void*)g,host_nodes,sizeof(Node)*num_nodes,cudaMemcpyHostToDevice);"+
+			"cudaMemcpy((void*)oute,host_edges,sizeof(Edge)*num_edges,cudaMemcpyHostToDevice);"+
+			"cudaMalloc((void**)&_ghchanged,sizeof(bool));"+
+			"_graph_init<<<1,1>>>(g,oute,num_nodes,num_edges,_ghchanged);"+
 			"return 0;"+
 			"}";
 	}
