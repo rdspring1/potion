@@ -129,7 +129,7 @@ public class CudaCode
 		"	Edge *start = _out_edges;"+
 		"	for(unsigned i=0;i<num_nodes;i++){"+
 		"		_graph[i].out_edges = start;"+
-		"		for(unsigned j=0;j<_graph[i].out_edges_size;i++) {"+
+		"		for(unsigned j=0;j<_graph[i].out_edges_size;j++) {"+
 		"			start[j].src = &_graph[i];"+
 		"			start[j].dst = &_graph[start[j].dst_index];"+
 		"		}"+
@@ -238,7 +238,7 @@ public class CudaCode
 			"num_edges = numEdges;"+
 			"Node *host_nodes = (Node*)malloc(sizeof(Node)*num_nodes);"+
 			"Edge *host_edges = (Edge*)malloc(sizeof(Edge)*num_edges);"+
-			"unsigned edge_index = 1;"+
+			"unsigned edge_index = 0;"+
 			"for (unsigned ii = 0; ii < num_nodes; ++ii) {"+
 			"unsigned psrc, noutgoing; "+
 			"if (ii > 0) {"+
@@ -249,12 +249,13 @@ public class CudaCode
 			"noutgoing = le64toh(outIdx[0]);"+
 			"}"+
 			"host_nodes[ii].out_edges_size = noutgoing;"+
+			"host_nodes[ii].id = ii;"+
 			"for (unsigned jj = 0; jj < noutgoing; ++jj) {"+
-			"unsigned dst = le32toh(outs[edge_index - 1]);"+
+			"unsigned dst = le32toh(outs[edge_index]);"+
 			"if (dst >= num_nodes) printf(\"\\tinvalid edge from %d to %d at index %d(%d).\\n\", ii, dst, jj, edge_index);"+
 
-			"host_edges[jj]."+edge_attr+" = edgeData[edge_index - 1];"+
-			"host_edges[jj].dst_index = dst;"+
+			"host_edges[edge_index]."+edge_attr+" = edgeData[edge_index];"+
+			"host_edges[edge_index].dst_index = dst;"+
 			""+
 			"host_nodes[dst].in_edges_size++;"+
 			"++edge_index;"+

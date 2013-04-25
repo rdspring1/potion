@@ -340,9 +340,9 @@ public class Codegen implements AstVisitor
 	}
 	public void accept(Iterate f)
 	{
-		emit("cudaMemset(_ghchanged,false,sizeof(bool));");
 		emit("changed = false;");
 		emit("while(!changed) {");
+		emit("cudaMemset(_ghchanged,false,sizeof(bool));");
 		f.exp.visit(this);
 		emit("cudaMemcpy(&changed, _ghchanged,sizeof(bool), cudaMemcpyDeviceToHost);");
 		emit("}");
