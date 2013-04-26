@@ -11,21 +11,47 @@ public class CudaCode
 	 */
 	public static String helpers()
 	{
-		return "";
+		return cudaTest()+printProgress()+rtclock();
 	}
-	public static String weakDefs()
+	public static String cudaTest()
 	{
-		return "";
+		return "static unsigned CudaTest(char *msg)"+
+		"{"+
+			"cudaError_t e;"+
+			"cudaThreadSynchronize();"+
+			"if (cudaSuccess != (e = cudaGetLastError())) {"+
+				"fprintf(stderr, \"%s: %d\\n\", msg, e);"+
+				"fprintf(stderr, \"%s\\n\", cudaGetErrorString(e));"+
+				"exit(-1);"+
+			"}"+
+		"}";
+
 	}
-	public static String sort()
+	private static String printProgress()
 	{
-		return 
-			//bubble sort because :effort:
-			"__device__ inline void _sort(Node **nodes, int length)"+
-			"{ for(int i=0;i<length;i++) for(int j=0;j<length;j++)"+
-			"    if(nodes[j]->id < nodes[i]->id) {"+
-			"      Node* tmp = nodes[i]; nodes[i] = nodes[j]; nodes[j] = tmp; }" +
-			"}\n";
+		return
+
+			"void progressPrint(unsigned maxii, unsigned ii) {"+
+				"const unsigned nsteps = 10;"+
+				"unsigned ineachstep = (maxii / nsteps);"+
+				"if (ii % ineachstep == 0) {"+
+					"printf(\"\\t%3d%%\\r\", ii*100/maxii + 1);"+
+					"fflush(stdout);"+
+				"}"+
+			"}";
+	}
+	private static String rtclock()
+	{
+		return "double rtclock()"+
+		"{"+
+			"struct timezone Tzp;"+
+			"struct timeval Tp;"+
+			"int stat;"+
+			"stat = gettimeofday (&Tp, &Tzp);"+
+			"if (stat != 0) printf(\"Error return from gettimeofday: %d\",stat);"+
+			"return(Tp.tv_sec + Tp.tv_usec*1.0e-6);"+
+		"}";
+
 	}
 	public static String globals(List<AttributeDef> node_attributes,List<AttributeDef> edge_attributes)
 	{
@@ -102,7 +128,10 @@ public class CudaCode
 			"load_graph(argv[1]);"+
 			"THREADS=512;"+
 			"GRID = (num_nodes+THREADS-1)/THREADS;"+
+			"double start = rtclock();"+
 			"_action_main();"+
+			"double end = rtclock();"+
+			"printf(\"Total Elapsed:%.3lf ms\\n\",100*(end-start));"+
 			"return 0;" +
 			"}\n";
 		return main;
@@ -163,6 +192,7 @@ public class CudaCode
 			"unsigned  *edgeData = (unsigned *)fptr32;"+
 			"num_nodes = numNodes;"+
 			"num_edges = numEdges;"+
+			"printf(\"file %s: nnodes=%d, nedges=%d.\\n\", file, num_nodes, num_edges);"+
 			"unsigned edge_index = 1;"+
 
 
@@ -194,7 +224,7 @@ public class CudaCode
 ""+
 			//"++nincoming[dst];"+
 		"}"+
-		//"progressPrint(num_nodes, ii);"+
+		"progressPrint(num_nodes, ii);"+
 	"}"+
 
 
@@ -206,16 +236,19 @@ public class CudaCode
 			"cudaMalloc((void**)&d_noutgoing,sizeof(unsigned)*num_nodes);"+
 			"cudaMalloc((void**)&d_srcsrc,sizeof(unsigned)*num_nodes);"+
 			"cudaMalloc((void**)&d_attribute_"+edge_attr+",sizeof(unsigned)*num_edges);"+
+			"CudaTest(\"Cuda Mallocs\\n\");"+
 			"cudaMemcpy((void*)d_destination,destination,sizeof(unsigned)*num_edges,cudaMemcpyHostToDevice);"+
 			"cudaMemcpy((void*)d_attribute_"+edge_attr+",attribute_"+edge_attr+",sizeof(unsigned)*num_edges,cudaMemcpyHostToDevice);"+
 			"cudaMemcpy((void*)d_psrc,psrc,sizeof(unsigned)*num_nodes,cudaMemcpyHostToDevice);"+
 			"cudaMemcpy((void*)d_noutgoing,noutgoing,sizeof(unsigned)*num_nodes,cudaMemcpyHostToDevice);"+
+			"CudaTest(\"Cuda Memcpy\\n\");"+
 			"cudaMemcpy((void*)d_srcsrc,srcsrc,sizeof(unsigned)*num_nodes,cudaMemcpyHostToDevice);"+
 			"cudaMemcpyToSymbol(_destination,(void*)&d_destination,sizeof(unsigned*),0,cudaMemcpyHostToDevice);"+
 			"cudaMemcpyToSymbol(_psrc,(void*)&d_psrc,sizeof(unsigned*),0,cudaMemcpyHostToDevice);"+
 			"cudaMemcpyToSymbol(_noutgoing,(void*)&d_noutgoing,sizeof(unsigned*),0,cudaMemcpyHostToDevice);"+
 			"cudaMemcpyToSymbol(_srcsrc,(void*)&d_srcsrc,sizeof(unsigned*),0,cudaMemcpyHostToDevice);"+
-			"cudaMemcpyToSymbol(_attribute_e_"+edge_attr+",(void*)&d_attribute_"+edge_attr+",sizeof(unsigned*),0,cudaMemcpyHostToDevice);";
+			"cudaMemcpyToSymbol(_attribute_e_"+edge_attr+",(void*)&d_attribute_"+edge_attr+",sizeof(unsigned*),0,cudaMemcpyHostToDevice);"+
+			"CudaTest(\"Cuda MemcpyToSymbol\\n\");";
 		String nodes = "";
 		for(AttributeDef def : node_attributes) {
 			if(def.id.id.equals("node"))

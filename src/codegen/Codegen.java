@@ -27,7 +27,6 @@ public class Codegen implements AstVisitor
 		//TODO: Print our shared library code, classes loaders etc
 		emit(CudaCode.headers());
 		p.graph.visit(this);
-		emit(CudaCode.weakDefs());
 		emit(CudaCode.globals(node_attributes,edge_attributes));
 		for(Def d: p.defs)
 			d.visit(this);
