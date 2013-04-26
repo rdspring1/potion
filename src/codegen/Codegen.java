@@ -393,7 +393,7 @@ public class Codegen implements AstVisitor
 		case FLOAT:
 			return "float* __restrict__";
 		case INT:
-			return "unsigned* __restrict__";
+			return "int* __restrict__";
 		case NODE:
 			return "unsigned";
 		case EDGE:

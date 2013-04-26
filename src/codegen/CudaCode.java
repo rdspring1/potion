@@ -69,13 +69,13 @@ public class CudaCode
 		for(AttributeDef def : node_attributes) {
 			if(def.id.id.equals("node"))
 				continue;
-			nodes += "__device__ unsigned *_attribute_n_"+def.id.id+";\n";
+			nodes += "__device__ int *_attribute_n_"+def.id.id+";\n";
 		}
 		return "__constant__ unsigned *_destination;\n"+
 			"__constant__ unsigned* _psrc;\n"+
 			"__constant__ unsigned* _noutgoing;\n"+
 			"__constant__ unsigned* _srcsrc;\n"+
-			"__device__ unsigned * _"+edge_attr +";\n"+
+			"__device__ int * _"+edge_attr +";\n"+
 			"__device__ bool _gchanged;\n"+
 			"unsigned num_edges;\n"+
 			"unsigned num_nodes;\n"+
