@@ -11,13 +11,11 @@ public class CudaCode
 	 */
 	public static String helpers()
 	{
-		return sort() + edge() + getNode()+graphInit();
+		return "";
 	}
 	public static String weakDefs()
 	{
-		return "class Node; class Edge; __device__ inline Node*_get_node(int);__device__ inline bool _edge(Node*, Node*);"+
-			"__device__ inline void _sort(Node**, int);"+
-			"__global__ void _graph_init(Node* g, Edge* oute,unsigned num_nodes, unsigned num_edges,bool *gchanged);\n";
+		return "";
 	}
 	public static String sort()
 	{
@@ -29,16 +27,33 @@ public class CudaCode
 			"      Node* tmp = nodes[i]; nodes[i] = nodes[j]; nodes[j] = tmp; }" +
 			"}\n";
 	}
-	public static String globals()
+	public static String globals(List<AttributeDef> node_attributes,List<AttributeDef> edge_attributes)
 	{
-		return "__constant__ Node *_graph;\n"+
-			"__constant__ Edge *_out_edges;\n"+
-			"__constant__ Edge *_in_edges;\n"+
-			"__device__ bool *_gchanged;\n"+
-			"bool *_ghchanged;\n"+
+		//NOTE: We only support one edge attribute right now until
+		//we define how the .gr format will work with >1
+		String edge_attr = "attribute_e_";
+		for (AttributeDef def : edge_attributes) {
+			//src and dst are handled implicitly
+			if(def.id.id.equals("src") || def.id.id.equals("dst"))
+				continue;
+			edge_attr += def.id.id;
+			break;
+		}
+		String nodes = "";
+		for(AttributeDef def : node_attributes) {
+			if(def.id.id.equals("node"))
+				continue;
+			nodes += "__device__ unsigned *_attribute_n_"+def.id.id+";\n";
+		}
+		return "__constant__ unsigned *_destination;\n"+
+			"__constant__ unsigned* _psrc;\n"+
+			"__constant__ unsigned* _noutgoing;\n"+
+			"__constant__ unsigned* _srcsrc;\n"+
+			"__device__ unsigned * _"+edge_attr +";\n"+
+			"__device__ bool _gchanged;\n"+
 			"unsigned num_edges;\n"+
 			"unsigned num_nodes;\n"+
-			"unsigned THREADS;unsigned GRID;\n";
+			"unsigned THREADS;unsigned GRID;\n"+nodes;
 		
 	}
 	public static String getNode()
@@ -49,94 +64,6 @@ public class CudaCode
 	{
 		//For now let's make edge a noop
 		return "__device__ inline bool _edge(Node *a, Node *b) {return true;}\n";
-	}
-
-
-	public static String edgeClass(List<AttributeDef> edge_attributes)
-	{
-		String base =
-			"class Edge {"+
-			"public:"+
-			" Node* src;"+
-			"unsigned dst_index;"+
-			" Node* dst;";
-		//TODO: Add in attributes here
-		StringBuilder from_attrs = new StringBuilder("");
-		for (AttributeDef def : edge_attributes) {
-			//src and dst are handled implicitly
-			if(def.id.id.equals("src") || def.id.id.equals("dst"))
-				continue;
-			switch(def.type.of){
-			case FLOAT:
-				from_attrs.append("float");
-				break;
-			case INT:
-				from_attrs.append("int");
-				break;
-			case NODE:
-				from_attrs.append("Node*");
-				break;
-			case EDGE:
-				from_attrs.append("Node*");
-				break;
-			}
-			from_attrs.append(" attribute_"+def.id.id+";");
-		}
-		return base +from_attrs + "};\n";
-	}
-	public static String nodeClass(List<AttributeDef> node_attributes)
-	{
-		String base =
-			"class Node {"+
-			"public:"+
-			" int id;"+
-			"__device__ inline bool operator==(const Node& rhs){ return this->id == rhs.id; }"+
-			" Edge *in_edges;"+
-			" int in_edges_size;"+
-			" Edge *out_edges;"+
-			" int out_edges_size;";
-		//TODO: this
-		StringBuilder from_attrs = new StringBuilder("");
-		for (AttributeDef def : node_attributes) {
-			//node is handled implicitly
-			if(def.id.id.equals("node"))
-				continue;
-			switch(def.type.of){
-			case FLOAT:
-				from_attrs.append("float");
-				break;
-			case INT:
-				from_attrs.append("int");
-				break;
-			case NODE:
-				from_attrs.append("Node*");
-				break;
-			case EDGE:
-				from_attrs.append("Node*");
-				break;
-			}
-			from_attrs.append(" attribute_"+def.id.id+";");
-		}
-		String function_decls = "";
-		return base + from_attrs+"};"+function_decls+"\n";
-	}
-	public static String graphInit()
-	{
-		return ""+
-		"__global__ void _graph_init(unsigned num_nodes, unsigned num_edges,bool *gchanged)\n"+
-		"{\n"+
-		"       _gchanged = gchanged;"+
-		"	Edge *start = _out_edges;"+
-		"	for(unsigned i=0;i<num_nodes;i++){"+
-		"		_graph[i].out_edges = start;"+
-		"		for(unsigned j=0;j<_graph[i].out_edges_size;j++) {"+
-		"			start[j].src = &_graph[i];"+
-		"			start[j].dst = &_graph[start[j].dst_index];"+
-		"		}"+
-		"		start += _graph[i].out_edges_size;"+
-		"	}\n"+
-		"}\n";
-
 	}
 	public static String headers()
 	{
@@ -172,19 +99,19 @@ public class CudaCode
 		String main =
 			"int main(int argc, char **argv)"+
 			"{"+
+			"load_graph(argv[1]);"+
 			"THREADS=512;"+
 			"GRID = (num_nodes+THREADS-1)/THREADS;"+
-			"load_graph(argv[1]);"+
 			"_action_main();"+
 			"return 0;" +
 			"}\n";
 		return main;
 	}
-	public static String loadGraph(List<AttributeDef> edge_attributes)
+	public static String loadGraph(List<AttributeDef> node_attributes,List<AttributeDef> edge_attributes)
 	{
 		//NOTE: We only support one edge attribute right now until
 		//we define how the .gr format will work with >1
-		String edge_attr = "attribute_";
+		String edge_attr = "";
 		for (AttributeDef def : edge_attributes) {
 			//src and dst are handled implicitly
 			if(def.id.id.equals("src") || def.id.id.equals("dst"))
@@ -192,7 +119,7 @@ public class CudaCode
 			edge_attr += def.id.id;
 			break;
 		}
-		return ""+
+		String base= ""+
 			"int load_graph(char* file)"+
 			"{"+
 			""+
@@ -236,39 +163,69 @@ public class CudaCode
 			"unsigned  *edgeData = (unsigned *)fptr32;"+
 			"num_nodes = numNodes;"+
 			"num_edges = numEdges;"+
-			"Node *host_nodes = (Node*)malloc(sizeof(Node)*num_nodes);"+
-			"Edge *host_edges = (Edge*)malloc(sizeof(Edge)*num_edges);"+
-			"unsigned edge_index = 0;"+
-			"for (unsigned ii = 0; ii < num_nodes; ++ii) {"+
-			"unsigned noutgoing; "+
-			"if (ii > 0) {"+
-			"noutgoing = le64toh(outIdx[ii]) - le64toh(outIdx[ii - 1]);"+
-			"} else {"+
-			"noutgoing = le64toh(outIdx[0]);"+
-			"}"+
-			"host_nodes[ii].out_edges_size = noutgoing;"+
-			"host_nodes[ii].id = ii;"+
-			"for (unsigned jj = 0; jj < noutgoing; ++jj) {"+
-			"unsigned dst = le32toh(outs[edge_index]);"+
-			"if (dst >= num_nodes) printf(\"\\tinvalid edge from %d to %d at index %d(%d).\\n\", ii, dst, jj, edge_index);"+
+			"unsigned edge_index = 1;"+
 
-			"host_edges[edge_index]."+edge_attr+" = edgeData[edge_index];"+
-			"host_edges[edge_index].dst_index = dst;"+
-			""+
-			"host_nodes[dst].in_edges_size++;"+
-			"++edge_index;"+
-			"}"+
-			"}"+
+
+
+	"unsigned int *destination = (unsigned int *)malloc((num_edges+1) * sizeof(unsigned int));"+
+	"unsigned *psrc = (unsigned int *)calloc(num_nodes+1, sizeof(unsigned int));"+
+	"psrc[num_nodes] = num_edges;"+
+	"unsigned *noutgoing = (unsigned int *)calloc(num_nodes, sizeof(unsigned int));"+
+	"unsigned *srcsrc = (unsigned int *)malloc(num_nodes * sizeof(unsigned int));"+
+	//ALLOC new defs
+	"unsigned *attribute_"+edge_attr+ "= (unsigned int *)calloc(num_edges,sizeof(unsigned int));"+
+
+
+	"for (unsigned ii = 0; ii < num_nodes; ++ii) {"+
+		"srcsrc[ii] = ii;"+
+		"if (ii > 0) {"+
+			"psrc[ii] = le64toh(outIdx[ii - 1]) + 1;"+
+			"noutgoing[ii] = le64toh(outIdx[ii]) - le64toh(outIdx[ii - 1]);"+
+		"} else {"+
+			"psrc[0] = 1;"+
+			"noutgoing[0] = le64toh(outIdx[0]);"+
+		"}"+
+		"for (unsigned jj = 0; jj < noutgoing[ii]; ++jj) {"+
+			"unsigned edgeindex = psrc[ii] + jj;"+
+			"unsigned dst = le32toh(outs[edgeindex - 1]);"+
+			"if (dst >= num_nodes) printf(\"\\tinvalid edge from %d to %d at index %d(%d).\\n\", ii, dst, jj, edgeindex);"+
+			"destination[edgeindex] = dst;"+
+			"attribute_"+edge_attr+"[edgeindex] = edgeData[edgeindex - 1];"+
+""+
+			//"++nincoming[dst];"+
+		"}"+
+		//"progressPrint(num_nodes, ii);"+
+	"}"+
+
+
+
 			"cfile.close();"+
-			"Node *g; Edge* oute;"+
-			"cudaMalloc((void**)&g,sizeof(Node)*num_nodes);"+
-			"cudaMalloc((void**)&oute,sizeof(Edge)*num_edges);"+
-			"cudaMemcpy((void*)g,host_nodes,sizeof(Node)*num_nodes,cudaMemcpyHostToDevice);"+
-			"cudaMemcpy((void*)oute,host_edges,sizeof(Edge)*num_edges,cudaMemcpyHostToDevice);"+
-			"cudaMalloc((void**)&_ghchanged,sizeof(bool));"+
-			"cudaMemcpyToSymbol(_graph,(void*)&g,sizeof(Node*),0,cudaMemcpyHostToDevice);"+
-			"cudaMemcpyToSymbol(_out_edges,(void*)&oute,sizeof(Node*),0,cudaMemcpyHostToDevice);"+
-			"_graph_init<<<1,1>>>(num_nodes,num_edges,_ghchanged);"+
+			"unsigned int *d_destination, *d_psrc, *d_noutgoing, *d_srcsrc, *d_attribute_"+edge_attr+";"+
+			"cudaMalloc((void**)&d_destination,sizeof(unsigned)*num_edges);"+
+			"cudaMalloc((void**)&d_psrc,sizeof(unsigned)*num_nodes);"+
+			"cudaMalloc((void**)&d_noutgoing,sizeof(unsigned)*num_nodes);"+
+			"cudaMalloc((void**)&d_srcsrc,sizeof(unsigned)*num_nodes);"+
+			"cudaMalloc((void**)&d_attribute_"+edge_attr+",sizeof(unsigned)*num_edges);"+
+			"cudaMemcpy((void*)d_destination,destination,sizeof(unsigned)*num_edges,cudaMemcpyHostToDevice);"+
+			"cudaMemcpy((void*)d_attribute_"+edge_attr+",attribute_"+edge_attr+",sizeof(unsigned)*num_edges,cudaMemcpyHostToDevice);"+
+			"cudaMemcpy((void*)d_psrc,psrc,sizeof(unsigned)*num_nodes,cudaMemcpyHostToDevice);"+
+			"cudaMemcpy((void*)d_noutgoing,noutgoing,sizeof(unsigned)*num_nodes,cudaMemcpyHostToDevice);"+
+			"cudaMemcpy((void*)d_srcsrc,srcsrc,sizeof(unsigned)*num_nodes,cudaMemcpyHostToDevice);"+
+			"cudaMemcpyToSymbol(_destination,(void*)&d_destination,sizeof(unsigned*),0,cudaMemcpyHostToDevice);"+
+			"cudaMemcpyToSymbol(_psrc,(void*)&d_psrc,sizeof(unsigned*),0,cudaMemcpyHostToDevice);"+
+			"cudaMemcpyToSymbol(_noutgoing,(void*)&d_noutgoing,sizeof(unsigned*),0,cudaMemcpyHostToDevice);"+
+			"cudaMemcpyToSymbol(_srcsrc,(void*)&d_srcsrc,sizeof(unsigned*),0,cudaMemcpyHostToDevice);"+
+			"cudaMemcpyToSymbol(_attribute_e_"+edge_attr+",(void*)&d_attribute_"+edge_attr+",sizeof(unsigned*),0,cudaMemcpyHostToDevice);";
+		String nodes = "";
+		for(AttributeDef def : node_attributes) {
+			if(def.id.id.equals("node"))
+				continue;
+			nodes += "unsigned *d_"+def.id.id+";"+
+				"cudaMalloc((void**)&d_"+def.id.id+",sizeof(unsigned)*num_nodes);"+
+				"cudaMemcpyToSymbol(_attribute_n_"+def.id.id+",(void*)&d_"+def.id.id+",sizeof(unsigned*));";
+		}
+
+		return base + nodes +
 			"return 0;"+
 			"}";
 	}

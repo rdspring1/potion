@@ -14,8 +14,11 @@ public class Codegen implements AstVisitor
 	private OutputStreamWriter writer;
 	private List<AttributeDef> node_attributes;
 	private List<AttributeDef> edge_attributes;
+	private java.util.Set<String> dont_star; //terrible hack :'(
+	private java.util.Set<String> dont_star_globals; //terrible hack :'(
 	public Codegen(OutputStreamWriter writer)
 	{
+		dont_star_globals = new HashSet<String>();
 		typedefs = new HashMap<String,Type>();
 		this.writer = writer;
 	}
@@ -25,13 +28,11 @@ public class Codegen implements AstVisitor
 		emit(CudaCode.headers());
 		p.graph.visit(this);
 		emit(CudaCode.weakDefs());
-		emit(CudaCode.globals());
-		emit(CudaCode.edgeClass(edge_attributes));
-		emit(CudaCode.nodeClass(node_attributes));
+		emit(CudaCode.globals(node_attributes,edge_attributes));
 		for(Def d: p.defs)
 			d.visit(this);
 		emit(CudaCode.helpers());
-		emit(CudaCode.loadGraph(edge_attributes));
+		emit(CudaCode.loadGraph(node_attributes,edge_attributes));
 		emit(CudaCode.genMain());
 	}
 	public void accept(Graph g)
@@ -50,13 +51,18 @@ public class Codegen implements AstVisitor
 
 	public void accept(OpDef def)
 	{
+		dont_star = new HashSet<String>();
 		List<Tuple> node_items = get_node_items(def.exp.tuples);
 		List<String> node_names = get_node_names(def.exp.tuples);
 		List<Tuple> edge_items = get_edge_items(def.exp.tuples);
 		List<Attribute> attributes = get_attributes(def.exp.tuples);
 		String params = get_param_string(node_names,edge_items);
 		//write our helper methods...
-		CheckShape(def);
+		for(Attribute at : attributes) {
+			if(this.typedefs.get(at.id.id).of == Type.Types.NODE ||
+			this.typedefs.get(at.id.id).of == Type.Types.EDGE )
+				dont_star.add(at.var.id);
+		}
 		CheckGuard(def);
 		Apply(def);
 
@@ -66,10 +72,10 @@ public class Codegen implements AstVisitor
 		for(Tuple t : def.exp.tuples) {
 			switch(t.type) {
 				case EDGES:
-				emit("Edge *e"+num_edges+++";\n");
+				emit("unsigned e"+num_edges+++";\n");
 				break;
 				case NODES:
-				emit("Node *"+get_prop_type(t,Type.Types.NODE)+";\n");
+				emit("unsigned "+get_prop_type(t,Type.Types.NODE)+";\n");
 				break;
 			}
 		}
@@ -83,25 +89,26 @@ public class Codegen implements AstVisitor
 		if(def.exp.tuples.size() == 0) {
 			emit("changed = _apply_"+def.id.id+"();");
 		} else if(node_items.size() == 1) {
-			emit(node_names.get(0)+ " = _get_node(_id);");
+			emit(node_names.get(0)+ " = _id;");
 			emit("changed = _apply_"+def.id.id+"("+params+");");
 		} else if(node_items.size() == 2 && edge_items.size() == 1) {
-			emit(node_names.get(0)+ " = _get_node(_id);");
+			emit(node_names.get(0)+ " = _id;");
 			//choose which edges we are iterating over, in edges or out edges
 			//if the first node is the src then out_edges, otherwise first node is dest and go for in_edges
-			String edge_map = (node_names.get(0).equals(get_prop_name(edge_items.get(0),"src"))) ? "out_edges" : "in_edges";
-			String edge_side = (node_names.get(0).equals(get_prop_name(edge_items.get(0),"src"))) ? "dst" : "src";
+			//String edge_map = (node_names.get(0).equals(get_prop_name(edge_items.get(0),"src"))) ? "out_edges" : "in_edges";
+			//String edge_side = (node_names.get(0).equals(get_prop_name(edge_items.get(0),"src"))) ? "dst" : "src";
 			//iterate over edges like a boss
-			emit("for(int _i = 0; _i < "+node_names.get(0)+"->"+edge_map+"_size ; _i++) {");
-			emit("e0 = &"+node_names.get(0)+"->" + edge_map+"[_i];");
-			emit(node_names.get(1)+" = e0->"+edge_side+";");
+			emit("for(int _i = 0; _i < _noutgoing["+node_names.get(0)+"] ; _i++) {");
+			//emit("e0 = &"+node_names.get(0)+"->" + edge_map+"[_i];");
+			emit("e0 = _psrc["+node_names.get(0)+"] + _i;");
+			emit(node_names.get(1)+" = _destination[e0];");
 			emit("changed |= _apply_"+def.id.id+"("+params+");");
 			emit("}");
 
 		} else {
 			System.err.println("Unsupported operation format");
 		}
-		emit("if (changed) *_gchanged = true;");
+		emit("if (changed) _gchanged = true;");
 		emit("}\n"); //end if(_id < num_nodes)
 		emit("\n}\n"); //end the function
 		
@@ -119,9 +126,8 @@ public class Codegen implements AstVisitor
 		String params = get_param_string(node_names,edge_items);
 		String args = get_arg_string(node_names,edge_items,false);
 		emit("__device__ inline bool _apply_"+def.id.id+"("+args+")\n{")  ;
-		emit("bool _changed = false;");
-		emit("if(!_checkshape_"+def.id.id+"("+params+")) return false;");
 		//now get all the needed attributes
+		emit("bool _changed =false;\n");
 		emitGets(node_items,edge_items);
 		//guard check
 		emit("if(_checkguard_"+def.id.id+"("+params+")) {");
@@ -152,40 +158,6 @@ public class Codegen implements AstVisitor
 		emit(";\n}\n");
 
 
-	}
-	public void CheckShape(OpDef def)
-	{
-
-		/*
-		 * Should emit something like __device__ int _checkshape_op([records])
-		 * { return ...}
-		 *
-		 *
-		 */
-		//emit highly unoptimized code, let someone else handle that noise
-		
-		//Categorize
-		
-		List<Tuple> node_items = get_node_items(def.exp.tuples);
-		List<String> node_names = get_node_names(def.exp.tuples);
-		List<Tuple> edge_items = get_edge_items(def.exp.tuples);
-		List<Attribute> attributes = get_attributes(def.exp.tuples);
-		String args = get_arg_string(node_names,edge_items,false);
-		emit("__device__ inline bool _checkshape_"+def.id.id+"("+args+")\n{");
-		for (int i=0;i<node_items.size();i++) {
-			for (int j=0;j<i;j++) {
-				String ni = get_prop_name(node_items.get(i),"node");
-				String nj = get_prop_name(node_items.get(j),"node");
-				emit("if("+nj+"=="+ni+") return false;");
-			}
-		}
-		for (int i=0;i<edge_items.size();i++) {
-			//emit code checking Edge(src,dst). Assume all edges have a src and dst, if not W/E.
-			String src = get_prop_name(edge_items.get(i),"src");
-			String dst = get_prop_name(edge_items.get(i),"dst");
-			emit("if(!_edge("+src+","+dst+")) return false;");
-		}
-		emit("return true;\n}\n");
 	}
 	private void emit(String s)
 	{
@@ -253,7 +225,8 @@ public class Codegen implements AstVisitor
 	}
 	public void accept(Var exp)
 	{
-		emit("*");
+		if(!dont_star.contains(exp.name.id) && !dont_star_globals.contains(exp.name.id))
+			emit("*");
 		emit(exp.name.id);
 	}
 	public void accept(LessThan exp)
@@ -343,9 +316,10 @@ public class Codegen implements AstVisitor
 	{
 		emit("changed = true;");
 		emit("while(changed) {");
-		emit("cudaMemset(_ghchanged,false,sizeof(bool));");
+		emit("changed = false;");
+		emit("cudaMemcpyToSymbol(_gchanged,&changed,sizeof(bool));");
 		f.exp.visit(this);
-		emit("cudaMemcpy(&changed, _ghchanged,sizeof(bool), cudaMemcpyDeviceToHost);");
+		emit("cudaMemcpyFromSymbol(&changed, _gchanged,sizeof(bool));");
 		emit("}");
 		//TODO
 	}
@@ -381,9 +355,13 @@ public class Codegen implements AstVisitor
 	}
 	public void accept(Global global)
 	{
+		if(global.type.of == Type.Types.NODE ||
+				global.type.of == Type.Types.EDGE )
+			dont_star_globals.add(global.name.id);
 		emit("__device__ ");
 		global.type.visit(this);
 		emit(" "+global.name.id+";");
+
 	}
 	public void accept(JoinStatement stm)
 	{
@@ -416,11 +394,11 @@ public class Codegen implements AstVisitor
 		case FLOAT:
 			return "float* __restrict__";
 		case INT:
-			return "int* __restrict__";
+			return "unsigned* __restrict__";
 		case NODE:
-			return "Node*";
+			return "unsigned";
 		case EDGE:
-			return "Edge*";
+			return "unsigned";
 		default:
 			return "";
 		}
@@ -493,10 +471,10 @@ public class Codegen implements AstVisitor
 		StringBuilder argbuilder = new StringBuilder(""); //for the args coming in
 		for (int i=0; i<node_names.size();i++) {
 			String s = node_names.get(i);
-			argbuilder.append(" Node* "+(restrict?  "__restrict__ " : "")+ s + ((i < node_names.size()-1) ? "," : ""));
+			argbuilder.append(" int "+ s + ((i < node_names.size()-1) ? "," : ""));
 		}
 		for (int i=0; i<edge_items.size();i++) {
-			argbuilder.append(", Edge* "+(restrict?  "__restrict__ " : "")+ "e" + i);
+			argbuilder.append(", int e" + i);
 		}
 		return argbuilder.toString();
 	}
@@ -512,7 +490,7 @@ public class Codegen implements AstVisitor
 					continue;
 				declared.add(at.var.id);
 				emit(this.typeToString(typedefs.get(at.id.id))+" "+at.var.id);
-				emit(" = &"+ get_prop_type(node,Type.Types.NODE)+"->attribute_"+at.id.id+";\n");
+				emit("= & _attribute_n_"+at.id.id+"["+get_prop_type(node,Type.Types.NODE)+"];\n");
 			}
 		}
 		int i=0;
@@ -527,7 +505,7 @@ public class Codegen implements AstVisitor
 					continue;
 				declared.add(at.var.id);
 				emit(this.typeToString(typedefs.get(at.id.id))+" "+at.var.id);
-				emit(" = &e"+i+"->attribute_"+at.id.id+";\n");
+				emit("= & _attribute_e_"+at.id.id+"[e"+i+"];\n");
 			}
 			i++;
 		}
