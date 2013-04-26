@@ -25,6 +25,7 @@ public class Codegen implements AstVisitor
 		emit(CudaCode.headers());
 		p.graph.visit(this);
 		emit(CudaCode.weakDefs());
+		emit(CudaCode.globals());
 		emit(CudaCode.edgeClass(edge_attributes));
 		emit(CudaCode.nodeClass(node_attributes));
 		for(Def d: p.defs)
@@ -340,8 +341,8 @@ public class Codegen implements AstVisitor
 	}
 	public void accept(Iterate f)
 	{
-		emit("changed = false;");
-		emit("while(!changed) {");
+		emit("changed = true;");
+		emit("while(changed) {");
 		emit("cudaMemset(_ghchanged,false,sizeof(bool));");
 		f.exp.visit(this);
 		emit("cudaMemcpy(&changed, _ghchanged,sizeof(bool), cudaMemcpyDeviceToHost);");

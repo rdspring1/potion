@@ -11,11 +11,11 @@ public class CudaCode
 	 */
 	public static String helpers()
 	{
-		return globals()+sort() + edge() + getNode()+graphInit();
+		return sort() + edge() + getNode()+graphInit();
 	}
 	public static String weakDefs()
 	{
-		return "class Node; class Edge; __device__ inline Node*_get_node(int);__device__ inline bool _edge(Node* Node*);"+
+		return "class Node; class Edge; __device__ inline Node*_get_node(int);__device__ inline bool _edge(Node*, Node*);"+
 			"__device__ inline void _sort(Node**, int);"+
 			"__global__ void _graph_init(Node* g, Edge* oute,unsigned num_nodes, unsigned num_edges,bool *gchanged);\n";
 	}
@@ -31,9 +31,9 @@ public class CudaCode
 	}
 	public static String globals()
 	{
-		return "__device__ Node *_graph;\n"+
-			"__device__ Edge *_out_edges;\n"+
-			"__device__ Edge *_in_edges;\n"+
+		return "__constant__ Node *_graph;\n"+
+			"__constant__ Edge *_out_edges;\n"+
+			"__constant__ Edge *_in_edges;\n"+
 			"__device__ bool *_gchanged;\n"+
 			"bool *_ghchanged;\n"+
 			"unsigned num_edges;\n"+
@@ -123,9 +123,9 @@ public class CudaCode
 	public static String graphInit()
 	{
 		return ""+
-		"__global__ void _graph_init(Node* g, Edge* oute,unsigned num_nodes, unsigned num_edges,bool *gchanged)\n"+
+		"__global__ void _graph_init(unsigned num_nodes, unsigned num_edges,bool *gchanged)\n"+
 		"{\n"+
-		"      _graph = g; _out_edges = oute; _gchanged = gchanged;"+
+		"       _gchanged = gchanged;"+
 		"	Edge *start = _out_edges;"+
 		"	for(unsigned i=0;i<num_nodes;i++){"+
 		"		_graph[i].out_edges = start;"+
@@ -172,8 +172,8 @@ public class CudaCode
 		String main =
 			"int main(int argc, char **argv)"+
 			"{"+
-			"THREADS=256;"+
-			"GRID = (num_nodes+255)/threads;"+
+			"THREADS=512;"+
+			"GRID = (num_nodes+THREADS-1)/THREADS;"+
 			"load_graph(argv[1]);"+
 			"_action_main();"+
 			"return 0;" +
@@ -240,12 +240,10 @@ public class CudaCode
 			"Edge *host_edges = (Edge*)malloc(sizeof(Edge)*num_edges);"+
 			"unsigned edge_index = 0;"+
 			"for (unsigned ii = 0; ii < num_nodes; ++ii) {"+
-			"unsigned psrc, noutgoing; "+
+			"unsigned noutgoing; "+
 			"if (ii > 0) {"+
-			"psrc = le64toh(outIdx[ii - 1]) + 1;"+
 			"noutgoing = le64toh(outIdx[ii]) - le64toh(outIdx[ii - 1]);"+
 			"} else {"+
-			"psrc = 1;"+
 			"noutgoing = le64toh(outIdx[0]);"+
 			"}"+
 			"host_nodes[ii].out_edges_size = noutgoing;"+
@@ -268,7 +266,9 @@ public class CudaCode
 			"cudaMemcpy((void*)g,host_nodes,sizeof(Node)*num_nodes,cudaMemcpyHostToDevice);"+
 			"cudaMemcpy((void*)oute,host_edges,sizeof(Edge)*num_edges,cudaMemcpyHostToDevice);"+
 			"cudaMalloc((void**)&_ghchanged,sizeof(bool));"+
-			"_graph_init<<<1,1>>>(g,oute,num_nodes,num_edges,_ghchanged);"+
+			"cudaMemcpyToSymbol(_graph,(void*)&g,sizeof(Node*),0,cudaMemcpyHostToDevice);"+
+			"cudaMemcpyToSymbol(_out_edges,(void*)&oute,sizeof(Node*),0,cudaMemcpyHostToDevice);"+
+			"_graph_init<<<1,1>>>(num_nodes,num_edges,_ghchanged);"+
 			"return 0;"+
 			"}";
 	}
