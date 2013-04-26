@@ -118,8 +118,6 @@ public class CudaCode
 			"#include <unistd.h>\n"+
 			"#include <cassert>\n"+
 			"#include <inttypes.h>\n"+
-			"#define le64toh(x) (x)\n"+
-			"#define le32toh(x) (x)\n";
 	}
 	public static String genMain()
 	{
