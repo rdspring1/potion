@@ -1,0 +1,12 @@
+graph [ nodes(node : Node , depth : int) ,
+		edges(src : Node , dst : Node, weight : int)]
+
+source Node
+initDist = [nodes(node a , depth ad)] -> 
+[ad = if (a == source) 0 else 99999999]
+push = [nodes(node a, depth ad) nodes(node b, depth bd) edges(src a, dst b)
+			(((ad + 1) < bd))] -> [bd = (ad + 1)]
+
+init = foreach initDist
+bfs = iterate push
+main = init ; bfs
