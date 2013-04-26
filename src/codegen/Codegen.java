@@ -97,10 +97,10 @@ public class Codegen implements AstVisitor
 			//String edge_map = (node_names.get(0).equals(get_prop_name(edge_items.get(0),"src"))) ? "out_edges" : "in_edges";
 			//String edge_side = (node_names.get(0).equals(get_prop_name(edge_items.get(0),"src"))) ? "dst" : "src";
 			//iterate over edges like a boss
-			emit("for(int _i = 0; _i < _noutgoing["+node_names.get(0)+"] ; _i++) {");
+			emit("for(int _i = 0; _i < tex1Dfetch(_noutgoing,"+node_names.get(0)+") ; _i++) {");
 			//emit("e0 = &"+node_names.get(0)+"->" + edge_map+"[_i];");
-			emit("e0 = _psrc["+node_names.get(0)+"] + _i;");
-			emit(node_names.get(1)+" = _destination[e0];");
+			emit("e0 = tex1Dfetch(_psrc,"+node_names.get(0)+") + _i;");
+			emit(node_names.get(1)+" = tex1Dfetch(_destination,e0);");
 			emit("changed |= _apply_"+def.id.id+"("+params+");");
 			emit("}");
 
