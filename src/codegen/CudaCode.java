@@ -117,7 +117,7 @@ public class CudaCode
 			"#include <fcntl.h>\n"+
 			"#include <unistd.h>\n"+
 			"#include <cassert>\n"+
-			"#include <inttypes.h>\n"+
+			"#include <inttypes.h>\n";
 	}
 	public static String genMain()
 	{
